@@ -17,14 +17,16 @@ const MOCK_VOCAB = [
 
 export async function GET() {
   const apiKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_DATABASE_ID;
   
-  if (!apiKey) {
+  if (!apiKey || !dbId) {
+    console.log("Missing env, using mock data");
     return Response.json({ vocabList: MOCK_VOCAB });
   }
 
   try {
     const response = await notion.databases.query({
-      database_id: process.env.NOTION_DATABASE_ID || "312d9ae3-60fb-8164-a254-000b45114929",
+      database_id: dbId,
       page_size: 100,
     });
 
