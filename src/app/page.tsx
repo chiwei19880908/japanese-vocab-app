@@ -34,10 +34,11 @@ export default function Home() {
   const [srsResult, setSrsResult] = useState<'correct' | 'wrong' | null>(null);
   const [srsFinished, setSrsFinished] = useState(false);
   
-  // Quiz - 修正邏輯
+  // Quiz - 用隨機題目列表
   const [quizMode, setQuizMode] = useState(false);
   const [quizLimit, setQuizLimit] = useState(10);
-  const [quizCurrentQ, setQuizCurrentQ] = useState(1);  // 當前題號
+  const [quizQuestions, setQuizQuestions] = useState<Vocab[]>([]);  // 隨機題目列表
+  const [quizCurrentQ, setQuizCurrentQ] = useState(1);
   const [quizOptions, setQuizOptions] = useState<{jp: string, cn: string}[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
@@ -68,10 +69,13 @@ export default function Home() {
   }, [srsIndex, srsMode, srsList, showSrsAnswer]);
 
   useEffect(() => {
-    if (quizMode && filteredList.length > 0 && !selectedAnswer) {
-      setTimeout(() => speak(filteredList[quizCurrentQ - 1]?.讀音 || filteredList[quizCurrentQ - 1]?.日文), 500);
+    if (quizMode && quizQuestions.length > 0 && !selectedAnswer) {
+      const currentVocab = quizQuestions[quizCurrentQ - 1];
+      if (currentVocab) {
+        setTimeout(() => speak(currentVocab.讀音 || currentVocab.日文), 500);
+      }
     }
-  }, [quizCurrentQ, quizMode, filteredList, selectedAnswer]);
+  }, [quizCurrentQ, quizMode, quizQuestions, selectedAnswer]);
 
   // Confirm before switching
   const switchMode = (action: () => void) => {
@@ -114,32 +118,36 @@ export default function Home() {
     }, 1200);
   };
 
-  const generateQuiz = useCallback((qNum: number) => {
-    if (filteredList.length < 4 || !filteredList[qNum - 1]) return;
-    const correct = filteredList[qNum - 1];
-    const others = filteredList
-      .filter(v => v.日文 !== correct.日文)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3);
+  const startQuiz = () => {
+    // 隨機打亂題目順序
+    const shuffled = [...filteredList].sort(() => Math.random() - 0.5).slice(0, quizLimit);
+    setQuizQuestions(shuffled);
+    setQuizCurrentQ(1);
+    setQuizScore({ correct: 0, total: 0 });
+    setQuizFinished(false);
+    setSrsMode(false);
+    setQuizMode(true);
+    // 生成第一題的選項
+    generateOptions(shuffled, 1);
+  };
+
+  const generateOptions = (questions: Vocab[], qNum: number) => {
+    if (questions.length < 4 || !questions[qNum - 1]) return;
+    const correct = questions[qNum - 1];
+    // 從全部題目中隨機選3個當錯誤選項
+    const allVocab = [...filteredList].sort(() => Math.random() - 0.5);
+    const others = allVocab.filter(v => v.日文 !== correct.日文).slice(0, 3);
     const options = [
       { jp: correct.日文, cn: correct.中文 },
       ...others.map(v => ({ jp: v.日文, cn: v.中文 }))
     ].sort(() => Math.random() - 0.5);
     setQuizOptions(options);
     setSelectedAnswer(null);
-  }, [filteredList]);
-
-  const startQuiz = () => {
-    setQuizMode(true);
-    setQuizCurrentQ(1);
-    setQuizScore({ correct: 0, total: 0 });
-    setQuizFinished(false);
-    generateQuiz(1);
-    setSrsMode(false);
   };
 
   const checkAnswer = (cn: string) => {
-    const correct = filteredList[quizCurrentQ - 1]?.中文;
+    const currentVocab = quizQuestions[quizCurrentQ - 1];
+    const correct = currentVocab?.中文;
     setSelectedAnswer(cn);
     setQuizScore(prev => ({ 
       correct: prev.correct + (cn === correct ? 1 : 0), 
@@ -149,12 +157,12 @@ export default function Home() {
 
   const nextQuiz = () => {
     const nextQ = quizCurrentQ + 1;
-    if (nextQ > quizLimit || nextQ > filteredList.length) {
+    if (nextQ > quizLimit || nextQ > quizQuestions.length) {
       setQuizFinished(true);
       return;
     }
     setQuizCurrentQ(nextQ);
-    generateQuiz(nextQ);
+    generateOptions(quizQuestions, nextQ);
   };
 
   const exitSrs = () => { setSrsMode(false); setSrsFinished(false); };
@@ -165,6 +173,8 @@ export default function Home() {
   if (loading) {
     return <div className="container"><div className="header"><h1>載入中...</h1></div></div>;
   }
+
+  const currentQuizVocab = quizQuestions[quizCurrentQ - 1];
 
   return (
     <div className="container">
@@ -190,7 +200,7 @@ export default function Home() {
       </header>
 
       <div className="controls">
-        <select value={level} onChange={(e) => { setLevel(e.target.value); setCurrentIndex(0); setQuizCurrentQ(1); }}>
+        <select value={level} onChange={(e) => { setLevel(e.target.value); setCurrentIndex(0); }}>
           <option value="all">全部</option>
           <option value="N5">N5</option>
           <option value="N4">N4</option>
@@ -261,17 +271,17 @@ export default function Home() {
       )}
 
       {/* Quiz 測驗 */}
-      {quizMode && !quizFinished && (
+      {quizMode && !quizFinished && currentQuizVocab && (
         <div className="card">
           <div className="progress-text">測驗 {quizCurrentQ} / {quizLimit}</div>
           <div className="progress-bar"><div className="progress-fill" style={{width: `${(quizCurrentQ / quizLimit) * 100}%`}}></div></div>
           
-          <div className="quiz-question">{filteredList[quizCurrentQ - 1]?.日文}</div>
-          <button className="sound-btn" onClick={() => speak(filteredList[quizCurrentQ - 1]?.讀音 || filteredList[quizCurrentQ - 1]?.日文)}>🔊 播放發音</button>
+          <div className="quiz-question">{currentQuizVocab.日文}</div>
+          <button className="sound-btn" onClick={() => speak(currentQuizVocab.讀音 || currentQuizVocab.日文)}>🔊 播放發音</button>
           
           <div className="quiz-options">
             {quizOptions.map((option, i) => {
-              const isCorrect = option.cn === filteredList[quizCurrentQ - 1]?.中文;
+              const isCorrect = option.cn === currentQuizVocab.中文;
               const isSelected = option.cn === selectedAnswer;
               return (
                 <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
