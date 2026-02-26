@@ -34,10 +34,10 @@ export default function Home() {
   const [srsResult, setSrsResult] = useState<'correct' | 'wrong' | null>(null);
   const [srsFinished, setSrsFinished] = useState(false);
   
-  // Quiz
+  // Quiz - 修正邏輯
   const [quizMode, setQuizMode] = useState(false);
   const [quizLimit, setQuizLimit] = useState(10);
-  const [quizIndex, setQuizIndex] = useState(0);
+  const [quizCurrentQ, setQuizCurrentQ] = useState(1);  // 當前題號
   const [quizOptions, setQuizOptions] = useState<{jp: string, cn: string}[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
@@ -69,13 +69,13 @@ export default function Home() {
 
   useEffect(() => {
     if (quizMode && filteredList.length > 0 && !selectedAnswer) {
-      setTimeout(() => speak(filteredList[quizIndex]?.讀音 || filteredList[quizIndex]?.日文), 500);
+      setTimeout(() => speak(filteredList[quizCurrentQ - 1]?.讀音 || filteredList[quizCurrentQ - 1]?.日文), 500);
     }
-  }, [quizIndex, quizMode, filteredList, selectedAnswer]);
+  }, [quizCurrentQ, quizMode, filteredList, selectedAnswer]);
 
   // Confirm before switching
   const switchMode = (action: () => void) => {
-    const inProgress = (srsMode && srsIndex > 0 && !srsFinished) || (quizMode && quizScore.total > 0 && !quizFinished);
+    const inProgress = (srsMode && srsIndex > 0 && !srsFinished) || (quizMode && quizCurrentQ > 1 && !quizFinished);
     if (inProgress) {
       setConfirmAction(() => () => { action(); setShowConfirm(false); });
       setShowConfirm(true);
@@ -114,38 +114,47 @@ export default function Home() {
     }, 1200);
   };
 
-  const generateQuiz = useCallback((idx: number) => {
-    if (filteredList.length < 4 || !filteredList[idx]) return;
-    const correct = filteredList[idx];
-    const others = filteredList.filter(v => v.日文 !== correct.日文).sort(() => Math.random() - 0.5).slice(0, 3);
-    const options = [{jp: correct.日文, cn: correct.中文}, ...others.map(v => ({jp: v.日文, cn: v.中文}))].sort(() => Math.random() - 0.5);
+  const generateQuiz = useCallback((qNum: number) => {
+    if (filteredList.length < 4 || !filteredList[qNum - 1]) return;
+    const correct = filteredList[qNum - 1];
+    const others = filteredList
+      .filter(v => v.日文 !== correct.日文)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    const options = [
+      { jp: correct.日文, cn: correct.中文 },
+      ...others.map(v => ({ jp: v.日文, cn: v.中文 }))
+    ].sort(() => Math.random() - 0.5);
     setQuizOptions(options);
     setSelectedAnswer(null);
   }, [filteredList]);
 
   const startQuiz = () => {
     setQuizMode(true);
-    setQuizIndex(0);
+    setQuizCurrentQ(1);
     setQuizScore({ correct: 0, total: 0 });
     setQuizFinished(false);
-    generateQuiz(0);
+    generateQuiz(1);
     setSrsMode(false);
   };
 
   const checkAnswer = (cn: string) => {
-    const correct = filteredList[quizIndex]?.中文;
+    const correct = filteredList[quizCurrentQ - 1]?.中文;
     setSelectedAnswer(cn);
-    setQuizScore(prev => ({ correct: prev.correct + (cn === correct ? 1 : 0), total: prev.total + 1 }));
+    setQuizScore(prev => ({ 
+      correct: prev.correct + (cn === correct ? 1 : 0), 
+      total: prev.total + 1 
+    }));
   };
 
   const nextQuiz = () => {
-    const nextIdx = quizIndex + 1;
-    if (nextIdx >= filteredList.length || nextIdx >= quizLimit) {
+    const nextQ = quizCurrentQ + 1;
+    if (nextQ > quizLimit || nextQ > filteredList.length) {
       setQuizFinished(true);
       return;
     }
-    setQuizIndex(nextIdx);
-    generateQuiz(nextIdx);
+    setQuizCurrentQ(nextQ);
+    generateQuiz(nextQ);
   };
 
   const exitSrs = () => { setSrsMode(false); setSrsFinished(false); };
@@ -159,7 +168,6 @@ export default function Home() {
 
   return (
     <div className="container">
-      {/* 確認對話框 */}
       {showConfirm && (
         <div className="modal-overlay">
           <div className="modal">
@@ -182,7 +190,7 @@ export default function Home() {
       </header>
 
       <div className="controls">
-        <select value={level} onChange={(e) => { setLevel(e.target.value); setCurrentIndex(0); setQuizIndex(0); }}>
+        <select value={level} onChange={(e) => { setLevel(e.target.value); setCurrentIndex(0); setQuizCurrentQ(1); }}>
           <option value="all">全部</option>
           <option value="N5">N5</option>
           <option value="N4">N4</option>
@@ -255,15 +263,15 @@ export default function Home() {
       {/* Quiz 測驗 */}
       {quizMode && !quizFinished && (
         <div className="card">
-          <div className="progress-text">測驗 {quizScore.total + 1 > quizLimit ? quizLimit : quizScore.total + 1} / {quizLimit}</div>
-          <div className="progress-bar"><div className="progress-fill" style={{width: `${((Math.min(quizScore.total + 1, quizLimit)) / quizLimit) * 100}%`}}></div></div>
+          <div className="progress-text">測驗 {quizCurrentQ} / {quizLimit}</div>
+          <div className="progress-bar"><div className="progress-fill" style={{width: `${(quizCurrentQ / quizLimit) * 100}%`}}></div></div>
           
-          <div className="quiz-question">{filteredList[quizIndex]?.日文}</div>
-          <button className="sound-btn" onClick={() => speak(filteredList[quizIndex]?.讀音 || filteredList[quizIndex]?.日文)}>🔊 播放發音</button>
+          <div className="quiz-question">{filteredList[quizCurrentQ - 1]?.日文}</div>
+          <button className="sound-btn" onClick={() => speak(filteredList[quizCurrentQ - 1]?.讀音 || filteredList[quizCurrentQ - 1]?.日文)}>🔊 播放發音</button>
           
           <div className="quiz-options">
             {quizOptions.map((option, i) => {
-              const isCorrect = option.cn === filteredList[quizIndex]?.中文;
+              const isCorrect = option.cn === filteredList[quizCurrentQ - 1]?.中文;
               const isSelected = option.cn === selectedAnswer;
               return (
                 <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
@@ -276,7 +284,7 @@ export default function Home() {
           {selectedAnswer && (
             <div className="card-actions">
               <button className="btn-primary btn-large" onClick={nextQuiz}>
-                {Math.min(quizScore.total + 1, quizLimit) >= quizLimit || quizScore.total + 1 >= filteredList.length ? '🏁 看結果' : '下一題 →'}
+                {quizCurrentQ >= quizLimit ? '🏁 看結果' : '下一題 →'}
               </button>
             </div>
           )}
