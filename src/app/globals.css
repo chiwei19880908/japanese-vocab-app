@@ -1,4 +1,4 @@
-'@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 
 * {
   margin: 0;
@@ -16,15 +16,10 @@
   --text-muted: #71717a;
   --accent: #8b5cf6;
   --accent-hover: #7c3aed;
-  --accent-soft: rgba(139, 92, 246, 0.15);
   --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.15);
   --error: #ef4444;
-  --error-bg: rgba(239, 68, 68, 0.15);
   --warning: #f59e0b;
   --border: #27272a;
-  --card-radius: 16px;
-  --button-radius: 10px;
 }
 
 body {
@@ -41,7 +36,6 @@ body {
   padding: 48px 24px;
 }
 
-/* Header */
 .header {
   text-align: center;
   margin-bottom: 40px;
@@ -52,10 +46,6 @@ body {
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 8px;
-  background: linear-gradient(135deg, #fafafa 0%, #a1a1aa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .header p {
@@ -85,7 +75,6 @@ body {
   background: var(--success);
 }
 
-/* Controls */
 .controls {
   display: flex;
   gap: 10px;
@@ -107,7 +96,7 @@ select {
   background: var(--bg-secondary);
   color: var(--text-primary);
   padding: 10px 16px;
-  border-radius: var(--button-radius);
+  border-radius: 10px;
   border: 1px solid var(--border);
   appearance: none;
   padding-right: 36px;
@@ -122,7 +111,7 @@ select:hover {
 
 button {
   padding: 10px 20px;
-  border-radius: var(--button-radius);
+  border-radius: 10px;
 }
 
 .btn-primary {
@@ -156,11 +145,10 @@ button {
   color: white;
 }
 
-/* Cards */
 .card {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: var(--card-radius);
+  border-radius: 16px;
   padding: 48px;
   text-align: center;
   margin-bottom: 24px;
@@ -192,7 +180,6 @@ button {
   margin-bottom: 16px;
 }
 
-/* Buttons */
 .card-actions {
   display: flex;
   gap: 12px;
@@ -215,7 +202,6 @@ button {
   font-size: 20px;
 }
 
-/* Quiz Options */
 .quiz-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -228,7 +214,7 @@ button {
   border: 1px solid var(--border);
   padding: 20px;
   font-size: 18px;
-  border-radius: var(--button-radius);
+  border-radius: 10px;
 }
 
 .quiz-option:hover:not(:disabled) {
@@ -237,16 +223,15 @@ button {
 }
 
 .quiz-option.correct {
-  background: var(--success-bg);
+  background: rgba(16, 185, 129, 0.15);
   border-color: var(--success);
 }
 
 .quiz-option.wrong {
-  background: var(--error-bg);
+  background: rgba(239, 68, 68, 0.15);
   border-color: var(--error);
 }
 
-/* Progress */
 .progress-bar {
   height: 4px;
   background: var(--bg-tertiary);
@@ -267,26 +252,24 @@ button {
   margin-bottom: 16px;
 }
 
-/* Result */
 .result {
   padding: 20px;
-  border-radius: var(--button-radius);
+  border-radius: 10px;
   font-size: 18px;
   font-weight: 500;
   margin-bottom: 24px;
 }
 
 .result-correct {
-  background: var(--success-bg);
+  background: rgba(16, 185, 129, 0.15);
   color: var(--success);
 }
 
 .result-wrong {
-  background: var(--error-bg);
+  background: rgba(239, 68, 68, 0.15);
   color: var(--error);
 }
 
-/* List */
 .vocab-list {
   display: flex;
   flex-direction: column;
@@ -324,6 +307,7 @@ button {
 .vocab-item-kana {
   color: #c084fc;
   font-size: 14px;
+  cursor: pointer;
 }
 
 .vocab-item-cn {
@@ -344,13 +328,11 @@ button {
   font-size: 16px;
 }
 
-/* Sound button */
 .sound-btn {
   background: none;
   border: none;
   color: #c084fc;
-;
-  padding:  cursor: pointer 4px;
+  cursor: pointer;
   font-size: 14px;
   opacity: 0.8;
   transition: opacity 0.2s;
@@ -360,7 +342,6 @@ button {
   opacity: 1;
 }
 
-/* Footer */
 .footer {
   text-align: center;
   margin-top: 40px;
@@ -375,7 +356,6 @@ button {
   padding: 0;
 }
 
-/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -385,7 +365,6 @@ button {
   animation: fadeIn 0.3s ease;
 }
 
-/* Responsive */
 @media (max-width: 640px) {
   .container {
     padding: 32px 16px;
