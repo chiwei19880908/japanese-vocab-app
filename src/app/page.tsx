@@ -9,7 +9,6 @@ interface Vocab {
   等級: string;
 }
 
-// 發音函數
 function speak(text: string) {
   if ('speechSynthesis' in window) {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -27,10 +26,9 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   
-  // 測驗模式
   const [quizMode, setQuizMode] = useState(false);
   const [quizIndex, setQuizIndex] = useState(0);
-  const [quizOptions, setQuizOptions] = useState<string[]>([]);
+  const [quizOptions, setQuizOptions] = useState<{jp: string, cn: string}[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
 
@@ -50,7 +48,6 @@ export default function Home() {
     ? vocabList 
     : vocabList.filter(v => v.等級 === level);
 
-  // 卡片模式
   const nextCard = () => {
     setShowAnswer(false);
     setCurrentIndex((currentIndex + 1) % filteredList.length);
@@ -61,7 +58,6 @@ export default function Home() {
     setCurrentIndex((currentIndex - 1 + filteredList.length) % filteredList.length);
   };
 
-  // 生成測驗選項
   const generateQuiz = () => {
     if (filteredList.length < 4) return;
     
@@ -71,12 +67,13 @@ export default function Home() {
       .sort(() => Math.random() - 0.5)
       .slice(0, 3);
     
-    const options = [correct, ...others].sort(() => Math.random() - 0.5);
-    setQuizOptions(options.map(v => v.中文));
+    const options = [{jp: correct.日文, cn: correct.中文}, ...others.map(v => ({jp: v.日文, cn: v.中文}))]
+      .sort(() => Math.random() - 0.5);
+    
+    setQuizOptions(options);
     setSelectedAnswer(null);
   };
 
-  // 開始測驗
   const startQuiz = () => {
     setQuizMode(true);
     setQuizIndex(0);
@@ -84,17 +81,15 @@ export default function Home() {
     generateQuiz();
   };
 
-  // 選擇答案
-  const checkAnswer = (answer: string) => {
+  const checkAnswer = (cn: string) => {
     const correct = filteredList[quizIndex].中文;
-    setSelectedAnswer(answer);
+    setSelectedAnswer(cn);
     setQuizScore(prev => ({
-      correct: prev.correct + (answer === correct ? 1 : 0),
+      correct: prev.correct + (cn === correct ? 1 : 0),
       total: prev.total + 1
     }));
   };
 
-  // 下一題
   const nextQuiz = () => {
     if (quizIndex + 1 >= filteredList.length) {
       setQuizMode(false);
@@ -120,7 +115,6 @@ export default function Home() {
       </header>
 
       <main className="max-w-4xl mx-auto">
-        {/* 控制欄 */}
         <div className="flex gap-3 md:gap-4 mb-6 flex-wrap">
           <select 
             value={level}
@@ -174,15 +168,19 @@ export default function Home() {
               </button>
             </div>
 
+            <div className="text-center text-xl text-slate-300 mb-6">
+              這個日文的意思是？
+            </div>
+
             <div className="grid grid-cols-2 gap-3 mb-6">
               {quizOptions.map((option, i) => {
-                const isCorrect = option === filteredList[quizIndex]?.中文;
-                const isSelected = option === selectedAnswer;
+                const isCorrect = option.cn === filteredList[quizIndex]?.中文;
+                const isSelected = option.cn === selectedAnswer;
                 
                 return (
                   <button
                     key={i}
-                    onClick={() => !selectedAnswer && checkAnswer(option)}
+                    onClick={() => !selectedAnswer && checkAnswer(option.cn)}
                     disabled={!!selectedAnswer}
                     className={`p-4 rounded-lg text-lg transition
                       ${!selectedAnswer ? 'bg-slate-700 hover:bg-slate-600' : ''}
@@ -192,7 +190,7 @@ export default function Home() {
                       disabled:opacity-80
                     `}
                   >
-                    {option}
+                    {option.cn}
                   </button>
                 );
               })}
