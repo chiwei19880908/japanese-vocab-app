@@ -23,22 +23,29 @@ export default function Home() {
   const [vocabList, setVocabList] = useState<Vocab[]>([]);
   const [loading, setLoading] = useState(true);
   const [level, setLevel] = useState('all');
-  const [showMode, setShowMode] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
 
+  // SRS
   const [srsMode, setSrsMode] = useState(false);
   const [srsList, setSrsList] = useState<Vocab[]>([]);
   const [srsIndex, setSrsIndex] = useState(0);
   const [showSrsAnswer, setShowSrsAnswer] = useState(false);
   const [srsResult, setSrsResult] = useState<'correct' | 'wrong' | null>(null);
+  const [srsFinished, setSrsFinished] = useState(false);
   
+  // Quiz
   const [quizMode, setQuizMode] = useState(false);
   const [quizLimit, setQuizLimit] = useState(10);
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizOptions, setQuizOptions] = useState<{jp: string, cn: string}[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
+  const [quizFinished, setQuizFinished] = useState(false);
+
+  // Confirm dialog
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
 
   const [learnedCount, setLearnedCount] = useState<Record<string, number>>({});
 
@@ -53,26 +60,29 @@ export default function Home() {
 
   const filteredList = level === 'all' ? vocabList : vocabList.filter(v => v.等級 === level);
 
+  // Auto play
   useEffect(() => {
-    if (showMode && filteredList.length > 0) {
-      const vocab = filteredList[currentIndex];
-      if (vocab) setTimeout(() => speak(vocab.讀音 || vocab.日文), 500);
-    }
-  }, [currentIndex, showMode, filteredList]);
-
-  useEffect(() => {
-    if (srsMode && srsList.length > 0) {
-      const vocab = srsList[srsIndex];
-      if (vocab && !showSrsAnswer) setTimeout(() => speak(vocab.讀音 || vocab.日文), 500);
+    if (srsMode && srsList.length > 0 && !showSrsAnswer) {
+      setTimeout(() => speak(srsList[srsIndex]?.讀音 || srsList[srsIndex]?.日文), 500);
     }
   }, [srsIndex, srsMode, srsList, showSrsAnswer]);
 
   useEffect(() => {
-    if (quizMode && filteredList.length > 0) {
-      const vocab = filteredList[quizIndex];
-      if (vocab && !selectedAnswer) setTimeout(() => speak(vocab.讀音 || vocab.日文), 500);
+    if (quizMode && filteredList.length > 0 && !selectedAnswer) {
+      setTimeout(() => speak(filteredList[quizIndex]?.讀音 || filteredList[quizIndex]?.日文), 500);
     }
   }, [quizIndex, quizMode, filteredList, selectedAnswer]);
+
+  // Confirm before switching
+  const switchMode = (action: () => void) => {
+    const inProgress = (srsMode && srsIndex > 0) || (quizMode && quizScore.total > 0);
+    if (inProgress) {
+      setConfirmAction(() => () => { action(); setShowConfirm(false); });
+      setShowConfirm(true);
+    } else {
+      action();
+    }
+  };
 
   const startSrs = () => {
     const notLearned = filteredList.filter(v => (learnedCount[v.日文] || 0) < 3);
@@ -81,7 +91,9 @@ export default function Home() {
     setSrsIndex(0);
     setShowSrsAnswer(false);
     setSrsResult(null);
+    setSrsFinished(false);
     setSrsMode(true);
+    setQuizMode(false);
   };
 
   const answerSrs = (isCorrect: boolean) => {
@@ -92,8 +104,13 @@ export default function Home() {
     localStorage.setItem('japanese-vocab-learned', JSON.stringify(newCount));
     setSrsResult(isCorrect ? 'correct' : 'wrong');
     setTimeout(() => {
-      if (srsIndex + 1 >= srsList.length) setSrsMode(false);
-      else { setSrsIndex(prev => prev + 1); setShowSrsAnswer(false); setSrsResult(null); }
+      if (srsIndex + 1 >= srsList.length) {
+        setSrsFinished(true);
+      } else {
+        setSrsIndex(prev => prev + 1);
+        setShowSrsAnswer(false);
+        setSrsResult(null);
+      }
     }, 1200);
   };
 
@@ -110,7 +127,9 @@ export default function Home() {
     setQuizMode(true);
     setQuizIndex(0);
     setQuizScore({ correct: 0, total: 0 });
+    setQuizFinished(false);
     generateQuiz(0);
+    setSrsMode(false);
   };
 
   const checkAnswer = (cn: string) => {
@@ -121,10 +140,16 @@ export default function Home() {
 
   const nextQuiz = () => {
     const nextIdx = quizIndex + 1;
-    if (nextIdx >= filteredList.length || nextIdx >= quizLimit) { setQuizMode(false); return; }
+    if (nextIdx >= filteredList.length || nextIdx >= quizLimit) {
+      setQuizFinished(true);
+      return;
+    }
     setQuizIndex(nextIdx);
     generateQuiz(nextIdx);
   };
+
+  const exitSrs = () => { setSrsMode(false); setSrsFinished(false); };
+  const exitQuiz = () => { setQuizMode(false); setQuizFinished(false); };
 
   const masteredCount = Object.values(learnedCount).filter(c => c >= 3).length;
 
@@ -134,6 +159,20 @@ export default function Home() {
 
   return (
     <div className="container">
+      {/* 確認對話框 */}
+      {showConfirm && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-title">確定要離開嗎？</div>
+            <div className="modal-text">目前的進度將會丟掉喔～</div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowConfirm(false)}>取消</button>
+              <button className="btn-primary" onClick={confirmAction}>確定離開</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="header">
         <h1>🇯🇵 日文單字庫</h1>
         <p>Notion 同步 • 間隔學習</p>
@@ -148,9 +187,10 @@ export default function Home() {
           <option value="N5">N5</option>
           <option value="N4">N4</option>
         </select>
-        <button className="btn-secondary" onClick={() => setShowMode(!showMode)}>{showMode ? '📝 列表' : '🎴 卡片'}</button>
-        <button className="btn-primary" onClick={startSrs}>📚 學習</button>
-        <button className="btn-primary" onClick={startQuiz}>🎮 測驗</button>
+        
+        <button className="btn-primary" onClick={() => switchMode(startSrs)}>📚 學習</button>
+        <button className="btn-primary" onClick={() => switchMode(startQuiz)}>🎮 測驗</button>
+        
         {quizMode && (
           <select value={quizLimit} onChange={(e) => setQuizLimit(Number(e.target.value))}>
             <option value="5">5題</option>
@@ -162,7 +202,7 @@ export default function Home() {
       </div>
 
       {/* SRS 學習 */}
-      {srsMode && srsList.length > 0 && (
+      {srsMode && !srsFinished && (
         <div className="card">
           <div className="progress-text">學習進度 {srsIndex + 1} / {srsList.length}</div>
           <div className="progress-bar"><div className="progress-fill" style={{width: `${((srsIndex + 1) / srsList.length) * 100}%`}}></div></div>
@@ -193,11 +233,27 @@ export default function Home() {
               )}
             </div>
           )}
+          
+          <div className="card-footer">
+            <button onClick={exitSrs}>結束學習</button>
+          </div>
+        </div>
+      )}
+
+      {/* SRS 完成 */}
+      {srsMode && srsFinished && (
+        <div className="card">
+          <div className="result-title">🎉 學習完成！</div>
+          <div className="result-stats">本次 {srsList.length} 個單字都已學習完畢</div>
+          <div className="card-actions">
+            <button className="btn-primary btn-large" onClick={startSrs}>再學一次</button>
+            <button className="btn-secondary btn-large" onClick={exitSrs}>回到列表</button>
+          </div>
         </div>
       )}
 
       {/* Quiz 測驗 */}
-      {quizMode && filteredList.length >= 4 && !srsMode && (
+      {quizMode && !quizFinished && (
         <div className="card">
           <div className="progress-text">測驗 {quizScore.total + 1} / {quizLimit}</div>
           <div className="progress-bar"><div className="progress-fill" style={{width: `${((quizScore.total + 1) / quizLimit) * 100}%`}}></div></div>
@@ -219,35 +275,40 @@ export default function Home() {
           </div>
           {selectedAnswer && (
             <div className="card-actions">
-              <button className="btn-primary btn-large" onClick={nextQuiz}>{quizIndex + 1 >= quizLimit || quizIndex + 1 >= filteredList.length ? '🏁 結束' : '下一題 →'}</button>
+              <button className="btn-primary btn-large" onClick={nextQuiz}>
+                {quizScore.total + 1 >= quizLimit || quizScore.total + 1 >= filteredList.length ? '🏁 看結果' : '下一題 →'}
+              </button>
             </div>
           )}
-          <div style={{marginTop: 16}}><button className="footer" onClick={() => setQuizMode(false)}>退出測驗</button></div>
+          <div className="card-footer">
+            <button onClick={exitQuiz}>退出測驗</button>
+          </div>
         </div>
       )}
 
-      {/* 卡片模式 */}
-      {showMode && !quizMode && !srsMode && filteredList.length > 0 && (
+      {/* Quiz 完成 */}
+      {quizMode && quizFinished && (
         <div className="card">
-          <div className="vocab-japanese">{filteredList[currentIndex]?.日文}</div>
-          {showAnswer && (<><div className="vocab-kana">{filteredList[currentIndex]?.讀音}</div><div className="vocab-chinese">{filteredList[currentIndex]?.中文}</div></>)}
-          <div className="card-actions">
-            <button className="btn-secondary btn-icon" onClick={() => setCurrentIndex((currentIndex - 1 + filteredList.length) % filteredList.length)}>←</button>
-            {!showAnswer ? (
-              <button className="btn-secondary btn-large" onClick={() => setShowAnswer(true)}>顯示</button>
-            ) : (
-              <>
-                <button className="btn-secondary btn-icon" onClick={() => speak(filteredList[currentIndex]?.讀音)}>🔊</button>
-                <button className="btn-primary btn-icon" onClick={() => setCurrentIndex((currentIndex + 1) % filteredList.length)}>→</button>
-              </>
-            )}
+          <div className="result-title">🏁 測驗結束！</div>
+          <div className="result-score">
+            <div className="score-number">{quizScore.correct}</div>
+            <div className="score-total">/ {quizScore.total}</div>
+            <div className="score-percent">{Math.round((quizScore.correct / quizScore.total) * 100)}%</div>
           </div>
-          <div className="progress-text" style={{marginTop: 16}}>{currentIndex + 1} / {filteredList.length}</div>
+          <div className="result-message">
+            {quizScore.correct === quizScore.total ? '🎉 全對！太厲害了！' : 
+             quizScore.correct >= quizScore.total * 0.7 ? '👍 很不錯！繼續加油！' :
+             '💪 再多練習一下吧！'}
+          </div>
+          <div className="card-actions">
+            <button className="btn-primary btn-large" onClick={startQuiz}>再測一次</button>
+            <button className="btn-secondary btn-large" onClick={exitQuiz}>回到列表</button>
+          </div>
         </div>
       )}
 
       {/* 列表模式 */}
-      {!showMode && !quizMode && !srsMode && (
+      {!srsMode && !quizMode && (
         <div className="vocab-list">
           {filteredList.map((vocab, i) => {
             const learned = learnedCount[vocab.日文] || 0;
