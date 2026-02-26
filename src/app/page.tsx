@@ -255,8 +255,8 @@ export default function Home() {
       {/* Quiz 測驗 */}
       {quizMode && !quizFinished && (
         <div className="card">
-          <div className="progress-text">測驗 {quizScore.total + 1} / {quizLimit}</div>
-          <div className="progress-bar"><div className="progress-fill" style={{width: `${((quizScore.total + 1) / quizLimit) * 100}%`}}></div></div>
+          <div className="progress-text">測驗 {quizScore.total + 1 > quizLimit ? quizLimit : quizScore.total + 1} / {quizLimit}</div>
+          <div className="progress-bar"><div className="progress-fill" style={{width: `${((Math.min(quizScore.total + 1, quizLimit)) / quizLimit) * 100}%`}}></div></div>
           
           <div className="quiz-question">{filteredList[quizIndex]?.日文}</div>
           <button className="sound-btn" onClick={() => speak(filteredList[quizIndex]?.讀音 || filteredList[quizIndex]?.日文)}>🔊 播放發音</button>
@@ -276,7 +276,7 @@ export default function Home() {
           {selectedAnswer && (
             <div className="card-actions">
               <button className="btn-primary btn-large" onClick={nextQuiz}>
-                {quizScore.total + 1 >= quizLimit || quizScore.total + 1 >= filteredList.length ? '🏁 看結果' : '下一題 →'}
+                {Math.min(quizScore.total + 1, quizLimit) >= quizLimit || quizScore.total + 1 >= filteredList.length ? '🏁 看結果' : '下一題 →'}
               </button>
             </div>
           )}
