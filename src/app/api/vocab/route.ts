@@ -1,9 +1,7 @@
 import { Client } from "@notionhq/client";
-import { NotionAPI } from 'notion-client';
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
-// 假資料（如果沒有 API key）
 const MOCK_VOCAB = [
   { 日文: "家族", 讀音: "かぞく", 中文: "家人", 等級: "N5" },
   { 日文: "両親", 讀音: "りょうしん", 中文: "父母", 等級: "N5" },
@@ -17,12 +15,11 @@ const MOCK_VOCAB = [
   { 日文: "手", 讀音: "て", 中文: "手", 等級: "N5" },
 ];
 
-export async function getVocabList() {
+export async function GET() {
   const apiKey = process.env.NOTION_API_KEY;
   
   if (!apiKey) {
-    console.log("No API key, using mock data");
-    return MOCK_VOCAB;
+    return Response.json({ vocabList: MOCK_VOCAB });
   }
 
   try {
@@ -41,14 +38,11 @@ export async function getVocabList() {
       };
     });
 
-    return vocabList.filter((v: any) => v.日文);
+    return Response.json({ 
+      vocabList: vocabList.filter((v: any) => v.日文) 
+    });
   } catch (error) {
     console.error("Notion API error:", error);
-    return MOCK_VOCAB;
+    return Response.json({ vocabList: MOCK_VOCAB });
   }
-}
-
-export default async function handler(req: Request) {
-  const vocabList = await getVocabList();
-  return Response.json({ vocabList });
 }
