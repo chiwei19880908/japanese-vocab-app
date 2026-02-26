@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Vocab {
   日文: string;
@@ -58,10 +58,10 @@ export default function Home() {
     setCurrentIndex((currentIndex - 1 + filteredList.length) % filteredList.length);
   };
 
-  const generateQuiz = () => {
-    if (filteredList.length < 4) return;
+  const generateQuiz = useCallback((idx: number) => {
+    if (filteredList.length < 4 || !filteredList[idx]) return;
     
-    const correct = filteredList[quizIndex];
+    const correct = filteredList[idx];
     const others = filteredList
       .filter(v => v.日文 !== correct.日文)
       .sort(() => Math.random() - 0.5)
@@ -72,17 +72,17 @@ export default function Home() {
     
     setQuizOptions(options);
     setSelectedAnswer(null);
-  };
+  }, [filteredList]);
 
   const startQuiz = () => {
     setQuizMode(true);
     setQuizIndex(0);
     setQuizScore({ correct: 0, total: 0 });
-    generateQuiz();
+    generateQuiz(0);
   };
 
   const checkAnswer = (cn: string) => {
-    const correct = filteredList[quizIndex].中文;
+    const correct = filteredList[quizIndex]?.中文;
     setSelectedAnswer(cn);
     setQuizScore(prev => ({
       correct: prev.correct + (cn === correct ? 1 : 0),
@@ -91,12 +91,13 @@ export default function Home() {
   };
 
   const nextQuiz = () => {
-    if (quizIndex + 1 >= filteredList.length) {
+    const nextIdx = quizIndex + 1;
+    if (nextIdx >= filteredList.length) {
       setQuizMode(false);
       return;
     }
-    setQuizIndex(prev => prev + 1);
-    generateQuiz();
+    setQuizIndex(nextIdx);
+    generateQuiz(nextIdx);
   };
 
   if (loading) {
