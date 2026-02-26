@@ -7,19 +7,24 @@
 }
 
 :root {
-  --bg-primary: #0a0a0b;
-  --bg-secondary: #141417;
-  --bg-tertiary: #1c1c21;
-  --bg-hover: #232329;
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --accent: #8b5cf6;
-  --accent-hover: #7c3aed;
-  --success: #10b981;
-  --error: #ef4444;
-  --warning: #f59e0b;
-  --border: #27272a;
+  --bg-primary: #FAF7F2;
+  --bg-secondary: #F5F0E8;
+  --bg-tertiary: #E8DFD5;
+  --bg-hover: #DDD5C9;
+  --text-primary: #3D3530;
+  --text-secondary: #6B5F55;
+  --text-muted: #9A8E85;
+  --accent: #C9A66B;
+  --accent-hover: #B8955A;
+  --accent-soft: rgba(201, 166, 107, 0.15);
+  --success: #7BA05B;
+  --success-bg: rgba(123, 160, 91, 0.15);
+  --error: #C47D6B;
+  --error-bg: rgba(196, 125, 107, 0.15);
+  --warning: #D4A855;
+  --border: #DDD5C9;
+  --card-radius: 20px;
+  --button-radius: 12px;
 }
 
 body {
@@ -42,10 +47,11 @@ body {
 }
 
 .header h1 {
-  font-size: 32px;
+  font-size: 34px;
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 8px;
+  color: var(--text-primary);
 }
 
 .header p {
@@ -95,23 +101,23 @@ select, button {
 select {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: 12px 18px;
+  border-radius: var(--button-radius);
   border: 1px solid var(--border);
   appearance: none;
-  padding-right: 36px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B5F55' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
+  background-position: right 14px center;
 }
 
 select:hover {
-  border-color: var(--text-muted);
+  border-color: var(--accent);
 }
 
 button {
-  padding: 10px 20px;
-  border-radius: 10px;
+  padding: 12px 24px;
+  border-radius: var(--button-radius);
 }
 
 .btn-primary {
@@ -122,79 +128,84 @@ button {
 .btn-primary:hover {
   background: var(--accent-hover);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(201, 166, 107, 0.3);
 }
 
 .btn-secondary {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1px);
 }
 
-.btn-secondary:hover {
-  background: var(--bg-hover);
-  border-color: var(--text-muted);
+.btn-secondary solid var(--border:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent);
 }
 
-.btn-success {
-  background: var(--success);
+ background: var(--success);
   color: white;
 }
 
 .btn-error {
   background: var(--error);
-  color: white;
+  color.btn-success {
+ : white;
 }
 
 .card {
-  background: var(--bg-secondary);
+  background: white;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--card-radius);
   padding: 48px;
   text-align: center;
   margin-bottom: 24px;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.04);
 }
 
 .vocab-japanese {
-  font-size: 72px;
+  font-size: 80px;
   font-weight: 700;
   letter-spacing: 0.02em;
   margin-bottom: 16px;
   line-height: 1.2;
+  color: var(--text-primary);
 }
 
 .vocab-kana {
-  font-size: 24px;
-  color: #c084fc;
+  font-size: 26px;
+  color: var(--accent);
   margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .vocab-chinese {
-  font-size: 28px;
-  color: #34d399;
+  font-size: 30px;
+  color: var(--success);
   margin-bottom: 32px;
+  font-weight: 500;
 }
 
 .quiz-question {
-  font-size: 56px;
+  font-size: 60px;
   font-weight: 700;
   margin-bottom: 16px;
 }
 
 .card-actions {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .btn-large {
-  padding: 14px 32px;
+  padding: 16px 36px;
   font-size: 15px;
 }
 
 .btn-icon {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -205,109 +216,123 @@ button {
 .quiz-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 24px;
 }
 
 .quiz-option {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  padding: 20px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  padding: 22px;
   font-size: 18px;
-  border-radius: 10px;
+  border-radius: 14px;
 }
 
 .quiz-option:hover:not(:disabled) {
-  background: var(--bg-hover);
+  background: var(--bg-tertiary);
   border-color: var(--accent);
 }
 
 .quiz-option.correct {
-  background: rgba(16, 185, 129, 0.15);
+  background: var(--success-bg);
   border-color: var(--success);
+  color: var(--success);
 }
 
 .quiz-option.wrong {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--error-bg);
   border-color: var(--error);
+  color: var(--error);
 }
 
 .progress-bar {
-  height: 4px;
+  height: 6px;
   background: var(--bg-tertiary);
-  border-radius: 2px;
+  border-radius: 3px;
   margin-bottom: 24px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: var(--accent);
-  transition: width 0.3s ease;
+  background: linear-gradient(90deg, var(--accent), var(--warning));
+  transition: width 0.4s ease;
+  border-radius: 3px;
 }
 
 .progress-text {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   margin-bottom: 16px;
 }
 
 .result {
-  padding: 20px;
-  border-radius: 10px;
+  padding: 22px;
+  border-radius: 14px;
   font-size: 18px;
   font-weight: 500;
   margin-bottom: 24px;
 }
 
 .result-correct {
-  background: rgba(16, 185, 129, 0.15);
+  background: var(--success-bg);
   color: var(--success);
 }
 
 .result-wrong {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--error-bg);
   color: var(--error);
 }
 
 .vocab-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .vocab-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--bg-secondary);
+  background: white;
   border: 1px solid var(--border);
-  padding: 14px 18px;
-  border-radius: 12px;
+  padding: 16px 20px;
+  border-radius: 14px;
   transition: all 0.2s ease;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.02);
 }
 
 .vocab-item:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--text-muted);
+  background: var(--bg-secondary);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .vocab-item-content {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .vocab-item-jp {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .vocab-item-kana {
-  color: #c084fc;
+  color: var(--accent);
   font-size: 14px;
   cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.vocab-item-kana:hover {
+  background: var(--accent-soft);
 }
 
 .vocab-item-cn {
@@ -317,34 +342,37 @@ button {
 
 .vocab-item-level {
   background: var(--bg-tertiary);
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
   font-size: 12px;
   color: var(--text-muted);
 }
 
 .vocab-item-learned {
   color: var(--warning);
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .sound-btn {
   background: none;
   border: none;
-  color: #c084fc;
+  color: var(--accent);
   cursor: pointer;
   font-size: 14px;
   opacity: 0.8;
   transition: opacity 0.2s;
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 
 .sound-btn:hover {
   opacity: 1;
+  background: var(--accent-soft);
 }
 
 .footer {
   text-align: center;
-  margin-top: 40px;
+  margin-top: 48px;
   color: var(--text-muted);
   font-size: 13px;
 }
@@ -357,13 +385,34 @@ button {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.card, .vocab-item {
-  animation: fadeIn 0.3s ease;
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
+
+.card {
+  animation: scaleIn 0.4s ease;
+}
+
+.vocab-item {
+  animation: fadeIn 0.3s ease;
+  animation-fill-mode: both;
+}
+
+.vocab-item:nth-child(1) { animation-delay: 0.02s; }
+.vocab-item:nth-child(2) { animation-delay: 0.04s; }
+.vocab-item:nth-child(3) { animation-delay: 0.06s; }
+.vocab-item:nth-child(4) { animation-delay: 0.08s; }
+.vocab-item:nth-child(5) { animation-delay: 0.1s; }
+.vocab-item:nth-child(6) { animation-delay: 0.12s; }
+.vocab-item:nth-child(7) { animation-delay: 0.14s; }
+.vocab-item:nth-child(8) { animation-delay: 0.16s; }
+.vocab-item:nth-child(9) { animation-delay: 0.18s; }
+.vocab-item:nth-child(10) { animation-delay: 0.2s; }
 
 @media (max-width: 640px) {
   .container {
@@ -371,11 +420,15 @@ button {
   }
   
   .header h1 {
-    font-size: 26px;
+    font-size: 28px;
   }
   
   .vocab-japanese {
-    font-size: 48px;
+    font-size: 52px;
+  }
+  
+  .vocab-chinese {
+    font-size: 24px;
   }
   
   .quiz-options {
@@ -389,6 +442,16 @@ button {
   .controls select,
   .controls button {
     flex: 1;
-    min-width: 80px;
+    min-width: 70px;
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+  
+  .card {
+    padding: 32px 20px;
+  }
+  
+  .quiz-option {
+    padding: 18px;
   }
 }
