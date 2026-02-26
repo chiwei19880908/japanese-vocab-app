@@ -75,7 +75,7 @@ export default function Home() {
 
   // Confirm before switching
   const switchMode = (action: () => void) => {
-    const inProgress = (srsMode && srsIndex > 0) || (quizMode && quizScore.total > 0);
+    const inProgress = (srsMode && srsIndex > 0 && !srsFinished) || (quizMode && quizScore.total > 0 && !quizFinished);
     if (inProgress) {
       setConfirmAction(() => () => { action(); setShowConfirm(false); });
       setShowConfirm(true);
