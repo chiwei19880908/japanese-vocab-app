@@ -48,7 +48,7 @@ export async function GET() {
     }).filter((v: any) => v.日文);
 
     // Get unique levels
-    const levels = [...new Set(vocabList.map((v: any) => v.等級))].sort();
+    const levels = Array.from(new Set(vocabList.map((v: any) => v.等級))).sort();
 
     return Response.json({ vocabList, levels });
   } catch (error) {
