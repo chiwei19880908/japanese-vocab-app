@@ -23,6 +23,7 @@ export default function Home() {
   const [vocabList, setVocabList] = useState<Vocab[]>([]);
   const [loading, setLoading] = useState(true);
   const [level, setLevel] = useState('all');
+  const [levels, setLevels] = useState<string[]>(['N5', 'N4', 'N3', 'N2', 'N1']);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
 
@@ -53,8 +54,15 @@ export default function Home() {
   useEffect(() => {
     fetch('/api/vocab')
       .then(res => res.json())
-      .then(data => { setVocabList(data.vocabList); setLoading(false); })
+      .then(data => {
+        setVocabList(data.vocabList || []);
+        if (data.levels && data.levels.length > 0) {
+          setLevels(data.levels);
+        }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
+      })
     const saved = localStorage.getItem('japanese-vocab-learned');
     if (saved) setLearnedCount(JSON.parse(saved));
   }, []);
@@ -202,8 +210,7 @@ export default function Home() {
       <div className="controls">
         <select value={level} onChange={(e) => { setLevel(e.target.value); setCurrentIndex(0); }}>
           <option value="all">全部</option>
-          <option value="N5">N5</option>
-          <option value="N4">N4</option>
+          {levels.map((l) => <option key={l} value={l}>{l}</option>)}
         </select>
         
         <button className="btn-primary" onClick={() => switchMode(startSrs)}>📚 學習</button>
