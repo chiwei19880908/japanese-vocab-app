@@ -17,23 +17,24 @@ export async function GET() {
   }
 
   try {
-    // Get first batch
-    const response1 = await notion.databases.query({
-      database_id: dbId,
-      page_size: 100,
-    });
+    // Use data_sources endpoint (works for connected databases)
+    const allResults: any[] = [];
+    let hasMore = true;
+    let cursor: string | undefined = undefined;
     
-    let allResults = [...response1.results];
-    let nextCursor = response1.next_cursor;
-    
-    // Get second batch if exists
-    if (nextCursor) {
-      const response2 = await notion.databases.query({
-        database_id: dbId,
-        page_size: 100,
-        start_cursor: nextCursor,
+    while (hasMore) {
+      const response: any = await (notion as any).request({
+        method: 'POST',
+        path: `/v1/data_sources/${dbId}/query`,
+        body: {
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {})
+        }
       });
-      allResults = [...allResults, ...response2.results];
+      
+      allResults.push(...response.results);
+      cursor = response.next_cursor;
+      hasMore = !!cursor;
     }
 
     // Extract vocab list and unique levels
