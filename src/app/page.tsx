@@ -62,7 +62,6 @@ export default function Home() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-      })
     const saved = localStorage.getItem('japanese-vocab-learned');
     if (saved) setLearnedCount(JSON.parse(saved));
   }, []);
