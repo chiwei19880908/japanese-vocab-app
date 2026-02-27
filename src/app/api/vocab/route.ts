@@ -17,13 +17,13 @@ export async function GET() {
   }
 
   try {
-    // Use data_sources endpoint (works for connected databases)
     const allResults: any[] = [];
-    let hasMore = true;
     let cursor: string | undefined = undefined;
     
-    while (hasMore) {
-      const response: any = await (notion as any).request({
+    // Loop to get all pages
+    do {
+      // Use raw request to data_sources endpoint
+      const response: any = await (notion as any).client.request({
         method: 'POST',
         path: `/v1/data_sources/${dbId}/query`,
         body: {
@@ -34,8 +34,7 @@ export async function GET() {
       
       allResults.push(...response.results);
       cursor = response.next_cursor;
-      hasMore = !!cursor;
-    }
+    } while (cursor);
 
     // Extract vocab list and unique levels
     const vocabList = allResults.map((page: any) => {
