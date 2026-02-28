@@ -169,14 +169,17 @@ export default function Home() {
   };
 
   const nextPreview = () => {
-    if (previewIndex + 1 >= batchSize && currentBatchStart + batchSize < previewBatch.length) {
-      const nextBatchStart = currentBatchStart + batchSize;
-      setCurrentBatchStart(nextBatchStart);
-      setPreviewIndex(nextBatchStart);
-      startQuizForBatch(nextBatchStart, batchSize);
-    } else if (currentBatchStart + batchSize >= previewBatch.length) {
-      setIsFinalReview(true);
-      startQuizForBatch(0, previewBatch.length);
+    // 学完当前batchSize个后，测验刚才学的这些
+    if (previewIndex + 1 >= batchSize) {
+      if (currentBatchStart + batchSize < previewBatch.length) {
+        // 还有下一组，最后会有总复习
+        setIsFinalReview(false);
+        startQuizForBatch(currentBatchStart, batchSize);
+      } {
+        // 最后一组了
+        setIsFinalReview(true);
+        startQuizForBatch(currentBatchStart, batchSize);
+      }
     } else {
       setPreviewIndex(prev => prev + 1);
     }
@@ -194,7 +197,7 @@ export default function Home() {
   };
 
   const generateQuizOptions = (batch: Vocab[], qNum: number) => {
-    if (batch.length < 4 || !batch[qNum - 1]) return;
+    if (!batch[qNum - 1]) return;
     
     const newQuizType = Math.floor(Math.random() * 5) + 1;
     setQuizType(newQuizType);
@@ -290,8 +293,11 @@ export default function Home() {
       if (isFinalReview) {
         setQuizFinished(true);
       } else {
+        // 测验完这组后，继续预览下一组
+        const nextBatchStart = currentBatchStart + batchSize;
+        setCurrentBatchStart(nextBatchStart);
+        setPreviewIndex(nextBatchStart);
         setMode('preview');
-        setPreviewIndex(currentBatchStart + batchSize);
       }
       return;
     }
