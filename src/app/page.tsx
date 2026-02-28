@@ -48,6 +48,8 @@ export default function Home() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
   const [quizFinished, setQuizFinished] = useState(false);
+  const [quizType, setQuizType] = useState(1);
+  const [listeningOrder, setListeningOrder] = useState<number[]>([]);
 
   // SRS (kept for review)
   const [srsMode, setSrsMode] = useState(false);
@@ -169,23 +171,93 @@ export default function Home() {
 
   const generateQuizOptions = (batch: Vocab[], qNum: number) => {
     if (batch.length < 4 || !batch[qNum - 1]) return;
+    
+    const newQuizType = Math.floor(Math.random() * 5) + 1;
+    setQuizType(newQuizType);
+    
     const correct = batch[qNum - 1];
+    
+    if (newQuizType === 5) {
+      const orderCount = Math.min(4, batch.length);
+      const indices = Array.from({ length: batch.length }, (_, i) => i).filter(i => i !== qNum - 1);
+      const shuffled = indices.sort(() => Math.random() - 0.5).slice(0, orderCount - 1);
+      const order = [qNum - 1, ...shuffled].sort(() => Math.random() - 0.5);
+      setListeningOrder(order);
+      
+      const options = order.map((_, i) => ({ jp: `第${i + 1}個`, cn: `第${i + 1}個` }));
+      setQuizOptions(options);
+      setSelectedAnswer(null);
+      return;
+    }
+    
     const others = [...filteredList]
       .filter(v => v.日文 !== correct.日文)
       .sort(() => Math.random() - 0.5)
       .slice(0, 3);
-    const options = [
-      { jp: correct.日文, cn: correct.中文 },
-      ...others.map(v => ({ jp: v.日文, cn: v.中文 }))
-    ].sort(() => Math.random() - 0.5);
+    
+    let options: {jp: string, cn: string}[];
+    
+    switch (newQuizType) {
+      case 1:
+        options = [
+          { jp: correct.日文, cn: correct.中文 },
+          ...others.map(v => ({ jp: v.日文, cn: v.中文 }))
+        ];
+        break;
+      case 2:
+        options = [
+          { jp: correct.讀音, cn: correct.中文 },
+          ...others.map(v => ({ jp: v.讀音, cn: v.中文 }))
+        ];
+        break;
+      case 3:
+        options = [
+          { jp: correct.日文, cn: correct.讀音 },
+          ...others.map(v => ({ jp: v.日文, cn: v.讀音 }))
+        ];
+        break;
+      case 4:
+        options = [
+          { jp: correct.日文, cn: correct.日文 },
+          ...others.map(v => ({ jp: v.日文, cn: v.日文 }))
+        ];
+        break;
+      default:
+        options = [
+          { jp: correct.日文, cn: correct.中文 },
+          ...others.map(v => ({ jp: v.日文, cn: v.中文 }))
+        ];
+    }
+    
+    options.sort(() => Math.random() - 0.5);
     setQuizOptions(options);
     setSelectedAnswer(null);
   };
 
-  const checkAnswer = (cn: string) => {
-    const correct = quizBatch[quizCurrentQ - 1]?.中文;
-    const isCorrect = cn === correct;
-    setSelectedAnswer(cn);
+  const checkAnswer = (answer: string) => {
+    const correct = quizBatch[quizCurrentQ - 1];
+    let isCorrect = false;
+    
+    switch (quizType) {
+      case 1:
+        isCorrect = answer === correct.中文;
+        break;
+      case 2:
+        isCorrect = answer === correct.中文;
+        break;
+      case 3:
+        isCorrect = answer === correct.讀音;
+        break;
+      case 4:
+        isCorrect = answer === correct.日文;
+        break;
+      case 5:
+        const correctIndex = listeningOrder.indexOf(quizCurrentQ - 1);
+        isCorrect = answer === `第${correctIndex + 1}個`;
+        break;
+    }
+    
+    setSelectedAnswer(answer);
     setQuizScore(prev => ({ correct: prev.correct + (isCorrect ? 1 : 0), total: prev.total + 1 }));
     if (isCorrect) addXP(10);
   };
@@ -323,21 +395,108 @@ export default function Home() {
           <div className="progress-text">測驗 {quizCurrentQ} / {quizBatch.length}</div>
           <div className="progress-bar"><div className="progress-fill" style={{width: `${(quizCurrentQ / quizBatch.length) * 100}%`}}></div></div>
           
-          <div className="quiz-question">{quizBatch[quizCurrentQ - 1]?.日文}</div>
-          <button className="sound-btn" onClick={() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文)}>🔊 播放發音</button>
+          {quizType === 1 && (
+            <>
+              <div className="quiz-question">{quizBatch[quizCurrentQ - 1]?.日文}</div>
+              <button className="sound-btn" onClick={() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文)}>🔊 播放發音</button>
+              <div className="quiz-options">
+                {quizOptions.map((option, i) => {
+                  const isCorrect = option.cn === quizBatch[quizCurrentQ - 1]?.中文;
+                  const isSelected = option.cn === selectedAnswer;
+                  return (
+                    <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      {option.cn}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
           
-          <div className="quiz-options">
-            {quizOptions.map((option, i) => {
-              const isCorrect = option.cn === quizBatch[quizCurrentQ - 1]?.中文;
-              const isSelected = option.cn === selectedAnswer;
-              return (
-                <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
-                  className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
-                  {option.cn}
-                </button>
-              );
-            })}
-          </div>
+          {quizType === 2 && (
+            <>
+              <div className="quiz-question">{quizBatch[quizCurrentQ - 1]?.讀音}</div>
+              <button className="sound-btn" onClick={() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文)}>🔊 播放發音</button>
+              <div className="quiz-options">
+                {quizOptions.map((option, i) => {
+                  const isCorrect = option.cn === quizBatch[quizCurrentQ - 1]?.中文;
+                  const isSelected = option.cn === selectedAnswer;
+                  return (
+                    <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      {option.cn}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          
+          {quizType === 3 && (
+            <>
+              <div className="quiz-question">{quizBatch[quizCurrentQ - 1]?.日文}</div>
+              <button className="sound-btn" onClick={() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文)}>🔊 播放發音</button>
+              <div className="quiz-options">
+                {quizOptions.map((option, i) => {
+                  const isCorrect = option.cn === quizBatch[quizCurrentQ - 1]?.讀音;
+                  const isSelected = option.cn === selectedAnswer;
+                  return (
+                    <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      {option.cn}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          
+          {quizType === 4 && (
+            <>
+              <div className="quiz-question">請聽發音，選正解</div>
+              <button className="sound-btn btn-listen" onClick={() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文)}>🔊 播放發音</button>
+              <div className="quiz-options">
+                {quizOptions.map((option, i) => {
+                  const isCorrect = option.cn === quizBatch[quizCurrentQ - 1]?.日文;
+                  const isSelected = option.cn === selectedAnswer;
+                  return (
+                    <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      {option.cn}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          
+          {quizType === 5 && (
+            <>
+              <div className="quiz-question">請聽發音，選第幾個是正確的</div>
+              <div className="listen-order">
+                {listeningOrder.map((idx, i) => (
+                  <button key={i} className="sound-btn btn-listen" onClick={() => speak(quizBatch[idx]?.讀音 || quizBatch[idx]?.日文)}>
+                    第{i + 1}個 🔊
+                  </button>
+                ))}
+              </div>
+              <div className="quiz-options">
+                {quizOptions.map((option, i) => {
+                  const correctIndex = listeningOrder.indexOf(quizCurrentQ - 1);
+                  const isCorrect = option.cn === `第${correctIndex + 1}個`;
+                  const isSelected = option.cn === selectedAnswer;
+                  return (
+                    <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      {option.cn}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          
           {selectedAnswer && (
             <div className="card-actions">
               <button className="btn-primary btn-large" onClick={nextQuiz}>

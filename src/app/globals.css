@@ -366,6 +366,26 @@ button {
   background: var(--accent-soft);
 }
 
+.btn-listen {
+  background: var(--accent);
+  color: white;
+  padding: 14px 28px;
+  font-size: 16px;
+}
+
+.btn-listen:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.listen-order {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
 .footer {
   text-align: center;
   margin-top: 48px;
