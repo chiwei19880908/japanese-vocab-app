@@ -40,6 +40,8 @@ export default function Home() {
   // Preview mode
   const [previewBatch, setPreviewBatch] = useState<Vocab[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [batchSize] = useState(2);
+  const [currentBatchStart, setCurrentBatchStart] = useState(0);
   
   // Quiz mode
   const [quizBatch, setQuizBatch] = useState<Vocab[]>([]);
@@ -62,6 +64,10 @@ export default function Home() {
   const [learnedCount, setLearnedCount] = useState<Record<string, number>>({});
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  
+  // Distributed learning
+  const [isFinalReview, setIsFinalReview] = useState(false);
+  const [quizBatchStart, setQuizBatchStart] = useState(0);
 
   useEffect(() => {
     fetch('/api/vocab')
@@ -112,9 +118,19 @@ export default function Home() {
   // Auto play in quiz
   useEffect(() => {
     if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer) {
-      setTimeout(() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文), 500);
+      if (quizType === 5) {
+        setTimeout(() => {
+          listeningOrder.forEach((idx, i) => {
+            setTimeout(() => {
+              speak(quizBatch[idx]?.讀音 || quizBatch[idx]?.日文);
+            }, i * 1200);
+          });
+        }, 500);
+      } else {
+        setTimeout(() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文), 500);
+      }
     }
-  }, [quizCurrentQ, mode, quizBatch, selectedAnswer]);
+  }, [quizCurrentQ, mode, quizBatch, selectedAnswer, quizType, listeningOrder]);
 
   // SRS auto play
   useEffect(() => {
@@ -146,27 +162,35 @@ export default function Home() {
     const batch = [...filteredList].sort(() => Math.random() - 0.5).slice(0, 10);
     setPreviewBatch(batch);
     setPreviewIndex(0);
+    setCurrentBatchStart(0);
+    setIsFinalReview(false);
     setMode('preview');
     setSrsMode(false);
   };
 
   const nextPreview = () => {
-    if (previewIndex + 1 >= previewBatch.length) {
-      // Start quiz after preview
-      startQuizFromPreview();
+    if (previewIndex + 1 >= batchSize && currentBatchStart + batchSize < previewBatch.length) {
+      const nextBatchStart = currentBatchStart + batchSize;
+      setCurrentBatchStart(nextBatchStart);
+      setPreviewIndex(nextBatchStart);
+      startQuizForBatch(nextBatchStart, batchSize);
+    } else if (currentBatchStart + batchSize >= previewBatch.length) {
+      setIsFinalReview(true);
+      startQuizForBatch(0, previewBatch.length);
     } else {
       setPreviewIndex(prev => prev + 1);
     }
   };
 
-  // Quiz from preview batch
-  const startQuizFromPreview = () => {
-    setQuizBatch([...previewBatch]);
+  const startQuizForBatch = (start: number, count: number) => {
+    const batch = previewBatch.slice(start, start + count);
+    setQuizBatch(batch);
+    setQuizBatchStart(start);
     setQuizCurrentQ(1);
     setQuizScore({ correct: 0, total: 0 });
     setQuizFinished(false);
     setMode('quiz');
-    generateQuizOptions([...previewBatch], 1);
+    generateQuizOptions(batch, 1);
   };
 
   const generateQuizOptions = (batch: Vocab[], qNum: number) => {
@@ -179,9 +203,7 @@ export default function Home() {
     
     if (newQuizType === 5) {
       const orderCount = Math.min(4, batch.length);
-      const indices = Array.from({ length: batch.length }, (_, i) => i).filter(i => i !== qNum - 1);
-      const shuffled = indices.sort(() => Math.random() - 0.5).slice(0, orderCount - 1);
-      const order = [qNum - 1, ...shuffled].sort(() => Math.random() - 0.5);
+      const order = Array.from({ length: orderCount }, (_, i) => i);
       setListeningOrder(order);
       
       const options = order.map((_, i) => ({ jp: `第${i + 1}個`, cn: `第${i + 1}個` }));
@@ -252,7 +274,7 @@ export default function Home() {
         isCorrect = answer === correct.日文;
         break;
       case 5:
-        const correctIndex = listeningOrder.indexOf(quizCurrentQ - 1);
+        const correctIndex = quizCurrentQ - 1;
         isCorrect = answer === `第${correctIndex + 1}個`;
         break;
     }
@@ -265,7 +287,12 @@ export default function Home() {
   const nextQuiz = () => {
     const nextQ = quizCurrentQ + 1;
     if (nextQ > quizBatch.length) {
-      setQuizFinished(true);
+      if (isFinalReview) {
+        setQuizFinished(true);
+      } else {
+        setMode('preview');
+        setPreviewIndex(currentBatchStart + batchSize);
+      }
       return;
     }
     setQuizCurrentQ(nextQ);
@@ -368,7 +395,9 @@ export default function Home() {
       {mode === 'preview' && (
         <div className="card">
           <div className="mode-badge">預覽模式</div>
-          <div className="progress-text">單字 {previewIndex + 1} / {previewBatch.length}</div>
+          <div className="progress-text">
+            第 {Math.floor(currentBatchStart / batchSize) + 1} 組 • 單字 {previewIndex + 1} / {previewBatch.length}
+          </div>
           <div className="progress-bar"><div className="progress-fill" style={{width: `${((previewIndex + 1) / previewBatch.length) * 100}%`}}></div></div>
           
           <div className="vocab-japanese">{previewBatch[previewIndex]?.日文}</div>
@@ -379,7 +408,7 @@ export default function Home() {
           
           <div className="card-actions">
             <button className="btn-primary btn-large" onClick={nextPreview}>
-              {previewIndex + 1 >= previewBatch.length ? '開始測驗 →' : '下一個 →'}
+              {((previewIndex + 1) % batchSize === 0 || previewIndex + 1 >= previewBatch.length) ? '開始測驗 →' : '下一個 →'}
             </button>
           </div>
           <div className="card-footer">
@@ -392,7 +421,9 @@ export default function Home() {
       {mode === 'quiz' && !quizFinished && quizBatch.length > 0 && (
         <div className="card">
           <div className="mode-badge quiz-badge">測驗模式</div>
-          <div className="progress-text">測驗 {quizCurrentQ} / {quizBatch.length}</div>
+          <div className="progress-text">
+            {isFinalReview ? '總複習' : `第 ${Math.floor(quizBatchStart / batchSize) + 1} 組`} • 測驗 {quizCurrentQ} / {quizBatch.length}
+          </div>
           <div className="progress-bar"><div className="progress-fill" style={{width: `${(quizCurrentQ / quizBatch.length) * 100}%`}}></div></div>
           
           {quizType === 1 && (
@@ -473,17 +504,17 @@ export default function Home() {
           
           {quizType === 5 && (
             <>
-              <div className="quiz-question">請聽發音，選第幾個是正確的</div>
-              <div className="listen-order">
-                {listeningOrder.map((idx, i) => (
-                  <button key={i} className="sound-btn btn-listen" onClick={() => speak(quizBatch[idx]?.讀音 || quizBatch[idx]?.日文)}>
-                    第{i + 1}個 🔊
-                  </button>
-                ))}
-              </div>
+              <div className="quiz-question">{quizBatch[quizCurrentQ - 1]?.日文}</div>
+              <button className="sound-btn btn-listen" onClick={() => {
+                listeningOrder.forEach((idx, i) => {
+                  setTimeout(() => {
+                    speak(quizBatch[idx]?.讀音 || quizBatch[idx]?.日文);
+                  }, i * 1200);
+                });
+              }}>🔊 依序播放發音</button>
               <div className="quiz-options">
                 {quizOptions.map((option, i) => {
-                  const correctIndex = listeningOrder.indexOf(quizCurrentQ - 1);
+                  const correctIndex = quizCurrentQ - 1;
                   const isCorrect = option.cn === `第${correctIndex + 1}個`;
                   const isSelected = option.cn === selectedAnswer;
                   return (
@@ -500,7 +531,7 @@ export default function Home() {
           {selectedAnswer && (
             <div className="card-actions">
               <button className="btn-primary btn-large" onClick={nextQuiz}>
-                {quizCurrentQ >= quizBatch.length ? '🏁 看結果' : '下一題 →'}
+                {quizCurrentQ >= quizBatch.length ? (isFinalReview ? '🏁 看結果' : '下一組 →') : '下一題 →'}
               </button>
             </div>
           )}
