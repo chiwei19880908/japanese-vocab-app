@@ -42,6 +42,7 @@ export default function Home() {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [batchSize] = useState(2);
   const [currentBatchStart, setCurrentBatchStart] = useState(0);
+  const [learnedInBatch, setLearnedInBatch] = useState(0);
   
   // Quiz mode
   const [quizBatch, setQuizBatch] = useState<Vocab[]>([]);
@@ -163,14 +164,20 @@ export default function Home() {
     setPreviewBatch(batch);
     setPreviewIndex(0);
     setCurrentBatchStart(0);
+    setLearnedInBatch(0);
     setIsFinalReview(false);
     setMode('preview');
     setSrsMode(false);
   };
 
   const nextPreview = () => {
-    // 学完当前batchSize个后，测验刚才学的这些
-    if (previewIndex + 1 >= batchSize) {
+    const newLearnedCount = learnedInBatch + 1;
+    setLearnedInBatch(newLearnedCount);
+    
+    // 学完batchSize个后，测验刚才学的这些
+    if (newLearnedCount >= batchSize) {
+      // 重置当前组计数
+      setLearnedInBatch(0);
       // 判断是否是最后一组
       const isLastBatch = currentBatchStart + batchSize >= previewBatch.length;
       setIsFinalReview(isLastBatch);
@@ -297,6 +304,7 @@ export default function Home() {
         const nextBatchStart = currentBatchStart + batchSize;
         setCurrentBatchStart(nextBatchStart);
         setPreviewIndex(nextBatchStart);
+        setLearnedInBatch(0); // 重置组内学习计数
         setMode('preview');
       }
       return;
@@ -402,7 +410,7 @@ export default function Home() {
         <div className="card">
           <div className="mode-badge">預覽模式</div>
           <div className="progress-text">
-            第 {Math.floor(currentBatchStart / batchSize) + 1} 組 • 單字 {previewIndex + 1} / {previewBatch.length}
+            第 {Math.floor(currentBatchStart / batchSize) + 1} 組 • 組內第 {learnedInBatch + 1}/{batchSize} • 總進度 {previewIndex + 1}/{previewBatch.length}
           </div>
           <div className="progress-bar"><div className="progress-fill" style={{width: `${((previewIndex + 1) / previewBatch.length) * 100}%`}}></div></div>
           
@@ -414,7 +422,7 @@ export default function Home() {
           
           <div className="card-actions">
             <button className="btn-primary btn-large" onClick={nextPreview}>
-              {((previewIndex + 1) % batchSize === 0 || previewIndex + 1 >= previewBatch.length) ? '開始測驗 →' : '下一個 →'}
+              {(learnedInBatch + 1 >= batchSize) ? '開始測驗 →' : '下一個 →'}
             </button>
           </div>
           <div className="card-footer">
