@@ -22,12 +22,34 @@ function speak(text: string) {
 export default function Home() {
   const [vocabList, setVocabList] = useState<Vocab[]>([]);
   const [loading, setLoading] = useState(true);
-  const [level, setLevel] = useState('all');
   const [levels, setLevels] = useState<string[]>(['N5', 'N4', 'N3', 'N2', 'N1']);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
+  const [level, setLevel] = useState('all');
 
-  // SRS
+  // User stats
+  const [userStats, setUserStats] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('japanese-vocab-stats');
+      if (saved) return JSON.parse(saved);
+    }
+    return { xp: 0, level: 1, streak: 0, lastDate: null, dailyGoal: 10, todayCount: 0 };
+  });
+
+  // Mode: 'list' | 'preview' | 'quiz'
+  const [mode, setMode] = useState('list');
+  
+  // Preview mode
+  const [previewBatch, setPreviewBatch] = useState<Vocab[]>([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  
+  // Quiz mode
+  const [quizBatch, setQuizBatch] = useState<Vocab[]>([]);
+  const [quizCurrentQ, setQuizCurrentQ] = useState(1);
+  const [quizOptions, setQuizOptions] = useState<{jp: string, cn: string}[]>([]);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
+  const [quizFinished, setQuizFinished] = useState(false);
+
+  // SRS (kept for review)
   const [srsMode, setSrsMode] = useState(false);
   const [srsList, setSrsList] = useState<Vocab[]>([]);
   const [srsIndex, setSrsIndex] = useState(0);
@@ -35,21 +57,9 @@ export default function Home() {
   const [srsResult, setSrsResult] = useState<'correct' | 'wrong' | null>(null);
   const [srsFinished, setSrsFinished] = useState(false);
   
-  // Quiz - 用隨機題目列表
-  const [quizMode, setQuizMode] = useState(false);
-  const [quizLimit, setQuizLimit] = useState(10);
-  const [quizQuestions, setQuizQuestions] = useState<Vocab[]>([]);  // 隨機題目列表
-  const [quizCurrentQ, setQuizCurrentQ] = useState(1);
-  const [quizOptions, setQuizOptions] = useState<{jp: string, cn: string}[]>([]);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
-  const [quizFinished, setQuizFinished] = useState(false);
-
-  // Confirm dialog
+  const [learnedCount, setLearnedCount] = useState<Record<string, number>>({});
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
-
-  const [learnedCount, setLearnedCount] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetch('/api/vocab')
@@ -62,39 +72,135 @@ export default function Home() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+    
     const saved = localStorage.getItem('japanese-vocab-learned');
     if (saved) setLearnedCount(JSON.parse(saved));
+    
+    // Check daily streak
+    const today = new Date().toDateString();
+    const stats = JSON.parse(localStorage.getItem('japanese-vocab-stats') || '{"xp":0,"level":1,"streak":0}');
+    if (stats.lastDate !== today) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (stats.lastDate === yesterday.toDateString()) {
+        stats.streak += 1;
+      } else if (stats.lastDate !== today) {
+        stats.streak = 1;
+      }
+      stats.lastDate = today;
+      stats.todayCount = 0;
+      localStorage.setItem('japanese-vocab-stats', JSON.stringify(stats));
+      setUserStats(stats);
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('japanese-vocab-stats', JSON.stringify(userStats));
+  }, [userStats]);
 
   const filteredList = level === 'all' ? vocabList : vocabList.filter(v => v.等級 === level);
 
-  // Auto play
+  // Auto play in preview
+  useEffect(() => {
+    if (mode === 'preview' && previewBatch.length > 0) {
+      setTimeout(() => speak(previewBatch[previewIndex]?.讀音 || previewBatch[previewIndex]?.日文), 500);
+    }
+  }, [previewIndex, mode, previewBatch]);
+
+  // Auto play in quiz
+  useEffect(() => {
+    if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer) {
+      setTimeout(() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文), 500);
+    }
+  }, [quizCurrentQ, mode, quizBatch, selectedAnswer]);
+
+  // SRS auto play
   useEffect(() => {
     if (srsMode && srsList.length > 0 && !showSrsAnswer) {
       setTimeout(() => speak(srsList[srsIndex]?.讀音 || srsList[srsIndex]?.日文), 500);
     }
   }, [srsIndex, srsMode, srsList, showSrsAnswer]);
 
-  useEffect(() => {
-    if (quizMode && quizQuestions.length > 0 && !selectedAnswer) {
-      const currentVocab = quizQuestions[quizCurrentQ - 1];
-      if (currentVocab) {
-        setTimeout(() => speak(currentVocab.讀音 || currentVocab.日文), 500);
-      }
-    }
-  }, [quizCurrentQ, quizMode, quizQuestions, selectedAnswer]);
-
-  // Confirm before switching
-  const switchMode = (action: () => void) => {
-    const inProgress = (srsMode && srsIndex > 0 && !srsFinished) || (quizMode && quizCurrentQ > 1 && !quizFinished);
+  const switchMode = (newMode: string, action?: () => void) => {
+    const inProgress = (srsMode && srsIndex > 0 && !srsFinished) || (mode === 'quiz' && quizScore.total > 0 && !quizFinished);
     if (inProgress) {
-      setConfirmAction(() => () => { action(); setShowConfirm(false); });
+      setConfirmAction(() => () => { if (action) action(); setShowConfirm(false); });
       setShowConfirm(true);
     } else {
-      action();
+      if (action) action();
+      setMode(newMode);
     }
   };
 
+  const addXP = (amount: number) => {
+    const newXP = userStats.xp + amount;
+    const newLevel = Math.floor(newXP / 100) + 1;
+    const newTodayCount = userStats.todayCount + 1;
+    setUserStats({ ...userStats, xp: newXP, level: newLevel, todayCount: newTodayCount });
+  };
+
+  // Preview mode
+  const startPreview = () => {
+    const batch = [...filteredList].sort(() => Math.random() - 0.5).slice(0, 10);
+    setPreviewBatch(batch);
+    setPreviewIndex(0);
+    setMode('preview');
+    setSrsMode(false);
+  };
+
+  const nextPreview = () => {
+    if (previewIndex + 1 >= previewBatch.length) {
+      // Start quiz after preview
+      startQuizFromPreview();
+    } else {
+      setPreviewIndex(prev => prev + 1);
+    }
+  };
+
+  // Quiz from preview batch
+  const startQuizFromPreview = () => {
+    setQuizBatch([...previewBatch]);
+    setQuizCurrentQ(1);
+    setQuizScore({ correct: 0, total: 0 });
+    setQuizFinished(false);
+    setMode('quiz');
+    generateQuizOptions([...previewBatch], 1);
+  };
+
+  const generateQuizOptions = (batch: Vocab[], qNum: number) => {
+    if (batch.length < 4 || !batch[qNum - 1]) return;
+    const correct = batch[qNum - 1];
+    const others = [...filteredList]
+      .filter(v => v.日文 !== correct.日文)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    const options = [
+      { jp: correct.日文, cn: correct.中文 },
+      ...others.map(v => ({ jp: v.日文, cn: v.中文 }))
+    ].sort(() => Math.random() - 0.5);
+    setQuizOptions(options);
+    setSelectedAnswer(null);
+  };
+
+  const checkAnswer = (cn: string) => {
+    const correct = quizBatch[quizCurrentQ - 1]?.中文;
+    const isCorrect = cn === correct;
+    setSelectedAnswer(cn);
+    setQuizScore(prev => ({ correct: prev.correct + (isCorrect ? 1 : 0), total: prev.total + 1 }));
+    if (isCorrect) addXP(10);
+  };
+
+  const nextQuiz = () => {
+    const nextQ = quizCurrentQ + 1;
+    if (nextQ > quizBatch.length) {
+      setQuizFinished(true);
+      return;
+    }
+    setQuizCurrentQ(nextQ);
+    generateQuizOptions(quizBatch, nextQ);
+  };
+
+  // SRS mode (review)
   const startSrs = () => {
     const notLearned = filteredList.filter(v => (learnedCount[v.日文] || 0) < 3);
     const pool = notLearned.length >= 15 ? notLearned.slice(0, 15) : filteredList.slice(0, 15);
@@ -104,7 +210,6 @@ export default function Home() {
     setSrsResult(null);
     setSrsFinished(false);
     setSrsMode(true);
-    setQuizMode(false);
   };
 
   const answerSrs = (isCorrect: boolean) => {
@@ -114,6 +219,7 @@ export default function Home() {
     setLearnedCount(newCount);
     localStorage.setItem('japanese-vocab-learned', JSON.stringify(newCount));
     setSrsResult(isCorrect ? 'correct' : 'wrong');
+    if (isCorrect) addXP(5);
     setTimeout(() => {
       if (srsIndex + 1 >= srsList.length) {
         setSrsFinished(true);
@@ -125,63 +231,13 @@ export default function Home() {
     }, 1200);
   };
 
-  const startQuiz = () => {
-    // 隨機打亂題目順序
-    const shuffled = [...filteredList].sort(() => Math.random() - 0.5).slice(0, quizLimit);
-    setQuizQuestions(shuffled);
-    setQuizCurrentQ(1);
-    setQuizScore({ correct: 0, total: 0 });
-    setQuizFinished(false);
-    setSrsMode(false);
-    setQuizMode(true);
-    // 生成第一題的選項
-    generateOptions(shuffled, 1);
-  };
-
-  const generateOptions = (questions: Vocab[], qNum: number) => {
-    if (questions.length < 4 || !questions[qNum - 1]) return;
-    const correct = questions[qNum - 1];
-    // 從全部題目中隨機選3個當錯誤選項
-    const allVocab = [...filteredList].sort(() => Math.random() - 0.5);
-    const others = allVocab.filter(v => v.日文 !== correct.日文).slice(0, 3);
-    const options = [
-      { jp: correct.日文, cn: correct.中文 },
-      ...others.map(v => ({ jp: v.日文, cn: v.中文 }))
-    ].sort(() => Math.random() - 0.5);
-    setQuizOptions(options);
-    setSelectedAnswer(null);
-  };
-
-  const checkAnswer = (cn: string) => {
-    const currentVocab = quizQuestions[quizCurrentQ - 1];
-    const correct = currentVocab?.中文;
-    setSelectedAnswer(cn);
-    setQuizScore(prev => ({ 
-      correct: prev.correct + (cn === correct ? 1 : 0), 
-      total: prev.total + 1 
-    }));
-  };
-
-  const nextQuiz = () => {
-    const nextQ = quizCurrentQ + 1;
-    if (nextQ > quizLimit || nextQ > quizQuestions.length) {
-      setQuizFinished(true);
-      return;
-    }
-    setQuizCurrentQ(nextQ);
-    generateOptions(quizQuestions, nextQ);
-  };
-
-  const exitSrs = () => { setSrsMode(false); setSrsFinished(false); };
-  const exitQuiz = () => { setQuizMode(false); setQuizFinished(false); };
-
   const masteredCount = Object.values(learnedCount).filter(c => c >= 3).length;
+  const xpToNextLevel = userStats.level * 100 - userStats.xp;
+  const progressToGoal = Math.min((userStats.todayCount / userStats.dailyGoal) * 100, 100);
 
   if (loading) {
     return <div className="container"><div className="header"><h1>載入中...</h1></div></div>;
   }
-
-  const currentQuizVocab = quizQuestions[quizCurrentQ - 1];
 
   return (
     <div className="container">
@@ -200,35 +256,127 @@ export default function Home() {
 
       <header className="header">
         <h1>🇯🇵 日文單字庫</h1>
-        <p>Notion 同步 • 間隔學習</p>
-        <div className="header-stats">
-          <div className="stat"><span className="stat-dot"></span>已記住 {masteredCount} / {filteredList.length}</div>
+        
+        {/* XP & Level Display */}
+        <div className="user-stats">
+          <div className="stat-item">
+            <span className="stat-icon">⭐</span>
+            <span className="stat-value">Lv.{userStats.level}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-icon">💎</span>
+            <span className="stat-value">{userStats.xp} XP</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-icon">🔥</span>
+            <span className="stat-value">{userStats.streak}天</span>
+          </div>
+        </div>
+        
+        {/* Daily Progress */}
+        <div className="daily-progress">
+          <div className="progress-label">今日目標: {userStats.todayCount} / {userStats.dailyGoal}</div>
+          <div className="progress-bar">
+            <div className="progress-fill xp-fill" style={{width: `${progressToGoal}%`}}></div>
+          </div>
         </div>
       </header>
 
       <div className="controls">
-        <select value={level} onChange={(e) => { setLevel(e.target.value); setCurrentIndex(0); }}>
+        <select value={level} onChange={(e) => { setLevel(e.target.value); }}>
           <option value="all">全部</option>
           {levels.map((l) => <option key={l} value={l}>{l}</option>)}
         </select>
         
-        <button className="btn-primary" onClick={() => switchMode(startSrs)}>📚 學習</button>
-        <button className="btn-primary" onClick={() => switchMode(startQuiz)}>🎮 測驗</button>
-        
-        {quizMode && (
-          <select value={quizLimit} onChange={(e) => setQuizLimit(Number(e.target.value))}>
-            <option value="5">5題</option>
-            <option value="10">10題</option>
-            <option value="15">15題</option>
-            <option value="20">20題</option>
-          </select>
-        )}
+        <button className="btn-primary" onClick={() => switchMode('preview', startPreview)}>🚀 快速學習</button>
+        <button className="btn-secondary" onClick={() => switchMode('list', () => setSrsMode(false))}>📖 複習</button>
       </div>
 
-      {/* SRS 學習 */}
+      {/* Preview Mode */}
+      {mode === 'preview' && (
+        <div className="card">
+          <div className="mode-badge">預覽模式</div>
+          <div className="progress-text">單字 {previewIndex + 1} / {previewBatch.length}</div>
+          <div className="progress-bar"><div className="progress-fill" style={{width: `${((previewIndex + 1) / previewBatch.length) * 100}%`}}></div></div>
+          
+          <div className="vocab-japanese">{previewBatch[previewIndex]?.日文}</div>
+          <button className="sound-btn" onClick={() => speak(previewBatch[previewIndex]?.讀音 || previewBatch[previewIndex]?.日文)}>🔊 播放發音</button>
+          
+          <div className="vocab-kana">{previewBatch[previewIndex]?.讀音}</div>
+          <div className="vocab-chinese">{previewBatch[previewIndex]?.中文}</div>
+          
+          <div className="card-actions">
+            <button className="btn-primary btn-large" onClick={nextPreview}>
+              {previewIndex + 1 >= previewBatch.length ? '開始測驗 →' : '下一個 →'}
+            </button>
+          </div>
+          <div className="card-footer">
+            <button onClick={() => setMode('list')}>退出</button>
+          </div>
+        </div>
+      )}
+
+      {/* Quiz Mode */}
+      {mode === 'quiz' && !quizFinished && quizBatch.length > 0 && (
+        <div className="card">
+          <div className="mode-badge quiz-badge">測驗模式</div>
+          <div className="progress-text">測驗 {quizCurrentQ} / {quizBatch.length}</div>
+          <div className="progress-bar"><div className="progress-fill" style={{width: `${(quizCurrentQ / quizBatch.length) * 100}%`}}></div></div>
+          
+          <div className="quiz-question">{quizBatch[quizCurrentQ - 1]?.日文}</div>
+          <button className="sound-btn" onClick={() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文)}>🔊 播放發音</button>
+          
+          <div className="quiz-options">
+            {quizOptions.map((option, i) => {
+              const isCorrect = option.cn === quizBatch[quizCurrentQ - 1]?.中文;
+              const isSelected = option.cn === selectedAnswer;
+              return (
+                <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
+                  className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                  {option.cn}
+                </button>
+              );
+            })}
+          </div>
+          {selectedAnswer && (
+            <div className="card-actions">
+              <button className="btn-primary btn-large" onClick={nextQuiz}>
+                {quizCurrentQ >= quizBatch.length ? '🏁 看結果' : '下一題 →'}
+              </button>
+            </div>
+          )}
+          <div className="card-footer">
+            <button onClick={() => setMode('list')}>退出</button>
+          </div>
+        </div>
+      )}
+
+      {/* Quiz Finished */}
+      {mode === 'quiz' && quizFinished && (
+        <div className="card">
+          <div className="result-title">🏁 測驗結束！</div>
+          <div className="result-score">
+            <div className="score-number">{quizScore.correct}</div>
+            <div className="score-total">/ {quizScore.total}</div>
+            <div className="score-percent">+{quizScore.correct * 10} XP</div>
+          </div>
+          <div className="result-message">
+            {quizScore.correct === quizScore.total ? '🎉 太厲害了！全對！' : 
+             quizScore.correct >= quizScore.total * 0.7 ? '👍 很不錯！繼續加油！' :
+             '💪 再多練習一下吧！'}
+          </div>
+          <div className="card-actions">
+            <button className="btn-primary btn-large" onClick={() => { startPreview(); }}>再學一次</button>
+            <button className="btn-secondary btn-large" onClick={() => setMode('list')}>回到列表</button>
+          </div>
+        </div>
+      )}
+
+      {/* SRS Review Mode */}
       {srsMode && !srsFinished && (
         <div className="card">
-          <div className="progress-text">學習進度 {srsIndex + 1} / {srsList.length}</div>
+          <div className="mode-badge review-badge">複習模式</div>
+          <div className="progress-text">複習 {srsIndex + 1} / {srsList.length}</div>
           <div className="progress-bar"><div className="progress-fill" style={{width: `${((srsIndex + 1) / srsList.length) * 100}%`}}></div></div>
           
           <div className="vocab-japanese">{srsList[srsIndex]?.日文}</div>
@@ -243,7 +391,7 @@ export default function Home() {
           
           {srsResult ? (
             <div className={`result ${srsResult === 'correct' ? 'result-correct' : 'result-wrong'}`}>
-              {srsResult === 'correct' ? '✅ 記住了！' : '❌ 再記一下'}
+              {srsResult === 'correct' ? '✅ 記住了！+5 XP' : '❌ 再記一下'}
             </div>
           ) : (
             <div className="card-actions">
@@ -257,83 +405,28 @@ export default function Home() {
               )}
             </div>
           )}
-          
           <div className="card-footer">
-            <button onClick={exitSrs}>結束學習</button>
+            <button onClick={() => { setSrsMode(false); setMode('list'); }}>結束複習</button>
           </div>
         </div>
       )}
 
-      {/* SRS 完成 */}
+      {/* SRS Finished */}
       {srsMode && srsFinished && (
         <div className="card">
-          <div className="result-title">🎉 學習完成！</div>
-          <div className="result-stats">本次 {srsList.length} 個單字都已學習完畢</div>
+          <div className="result-title">🎉 複習完成！</div>
+          <div className="result-stats">本次 {srsList.length} 個單字都已複習完畢</div>
           <div className="card-actions">
-            <button className="btn-primary btn-large" onClick={startSrs}>再學一次</button>
-            <button className="btn-secondary btn-large" onClick={exitSrs}>回到列表</button>
+            <button className="btn-primary btn-large" onClick={startSrs}>再複習一次</button>
+            <button className="btn-secondary btn-large" onClick={() => { setSrsMode(false); setMode('list'); }}>回到列表</button>
           </div>
         </div>
       )}
 
-      {/* Quiz 測驗 */}
-      {quizMode && !quizFinished && currentQuizVocab && (
-        <div className="card">
-          <div className="progress-text">測驗 {quizCurrentQ} / {quizLimit}</div>
-          <div className="progress-bar"><div className="progress-fill" style={{width: `${(quizCurrentQ / quizLimit) * 100}%`}}></div></div>
-          
-          <div className="quiz-question">{currentQuizVocab.日文}</div>
-          <button className="sound-btn" onClick={() => speak(currentQuizVocab.讀音 || currentQuizVocab.日文)}>🔊 播放發音</button>
-          
-          <div className="quiz-options">
-            {quizOptions.map((option, i) => {
-              const isCorrect = option.cn === currentQuizVocab.中文;
-              const isSelected = option.cn === selectedAnswer;
-              return (
-                <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
-                  className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
-                  {option.cn}
-                </button>
-              );
-            })}
-          </div>
-          {selectedAnswer && (
-            <div className="card-actions">
-              <button className="btn-primary btn-large" onClick={nextQuiz}>
-                {quizCurrentQ >= quizLimit ? '🏁 看結果' : '下一題 →'}
-              </button>
-            </div>
-          )}
-          <div className="card-footer">
-            <button onClick={exitQuiz}>退出測驗</button>
-          </div>
-        </div>
-      )}
-
-      {/* Quiz 完成 */}
-      {quizMode && quizFinished && (
-        <div className="card">
-          <div className="result-title">🏁 測驗結束！</div>
-          <div className="result-score">
-            <div className="score-number">{quizScore.correct}</div>
-            <div className="score-total">/ {quizScore.total}</div>
-            <div className="score-percent">{Math.round((quizScore.correct / quizScore.total) * 100)}%</div>
-          </div>
-          <div className="result-message">
-            {quizScore.correct === quizScore.total ? '🎉 全對！太厲害了！' : 
-             quizScore.correct >= quizScore.total * 0.7 ? '👍 很不錯！繼續加油！' :
-             '💪 再多練習一下吧！'}
-          </div>
-          <div className="card-actions">
-            <button className="btn-primary btn-large" onClick={startQuiz}>再測一次</button>
-            <button className="btn-secondary btn-large" onClick={exitQuiz}>回到列表</button>
-          </div>
-        </div>
-      )}
-
-      {/* 列表模式 */}
-      {!srsMode && !quizMode && (
+      {/* List Mode */}
+      {mode === 'list' && !srsMode && (
         <div className="vocab-list">
+          <div className="list-info">共 {filteredList.length} 個單字 • 已記住 {masteredCount}</div>
           {filteredList.map((vocab, i) => {
             const learned = learnedCount[vocab.日文] || 0;
             return (
@@ -352,7 +445,7 @@ export default function Home() {
       )}
 
       <footer className="footer">
-        <p>學習得來不易，持續就是力量 💪</p>
+        <p>每日目標 {userStats.dailyGoal} 個單字 💪</p>
       </footer>
     </div>
   );

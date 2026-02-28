@@ -544,3 +544,75 @@ button {
 .card-footer button:hover {
   color: var(--text-primary);
 }
+
+/*** User Stats ***/
+.user-stats {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin: 16px 0;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.stat-icon {
+  font-size: 18px;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.daily-progress {
+  margin: 12px 0;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/*** Mode Badge ***/
+.mode-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  background: var(--accent);
+  color: white;
+}
+
+.quiz-badge {
+  background: var(--success);
+}
+
+.review-badge {
+  background: #8b5cf6;
+}
+
+/*** List Info ***/
+.list-info {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.xp-fill {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
