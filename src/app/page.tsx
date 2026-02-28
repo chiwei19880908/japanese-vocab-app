@@ -51,7 +51,7 @@ export default function Home() {
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
   const [quizFinished, setQuizFinished] = useState(false);
   const [quizType, setQuizType] = useState(1);
-  const [listeningOrder, setListeningOrder] = useState<number[]>([]);
+  const [listeningOrder, setListeningOrder] = useState<Vocab[]>([]);
 
   // SRS (kept for review)
   const [srsMode, setSrsMode] = useState(false);
@@ -120,9 +120,9 @@ export default function Home() {
     if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer) {
       if (quizType === 5) {
         setTimeout(() => {
-          listeningOrder.forEach((idx, i) => {
+          listeningOrder.forEach((vocab, i) => {
             setTimeout(() => {
-              speak(quizBatch[idx]?.讀音 || quizBatch[idx]?.日文);
+              speak(vocab.讀音 || vocab.日文);
             }, i * 1200);
           });
         }, 500);
@@ -171,15 +171,10 @@ export default function Home() {
   const nextPreview = () => {
     // 学完当前batchSize个后，测验刚才学的这些
     if (previewIndex + 1 >= batchSize) {
-      if (currentBatchStart + batchSize < previewBatch.length) {
-        // 还有下一组，最后会有总复习
-        setIsFinalReview(false);
-        startQuizForBatch(currentBatchStart, batchSize);
-      } {
-        // 最后一组了
-        setIsFinalReview(true);
-        startQuizForBatch(currentBatchStart, batchSize);
-      }
+      // 判断是否是最后一组
+      const isLastBatch = currentBatchStart + batchSize >= previewBatch.length;
+      setIsFinalReview(isLastBatch);
+      startQuizForBatch(currentBatchStart, batchSize);
     } else {
       setPreviewIndex(prev => prev + 1);
     }
@@ -205,11 +200,13 @@ export default function Home() {
     const correct = batch[qNum - 1];
     
     if (newQuizType === 5) {
-      const orderCount = Math.min(4, batch.length);
-      const order = Array.from({ length: orderCount }, (_, i) => i);
-      setListeningOrder(order);
+      // 听力排序题：从全部单字中选4个，确保有4个选项
+      const allVocab = [...filteredList].sort(() => Math.random() - 0.5);
+      const orderCount = 4;
+      const selectedVocab = allVocab.slice(0, orderCount);
+      setListeningOrder(selectedVocab);
       
-      const options = order.map((_, i) => ({ jp: `第${i + 1}個`, cn: `第${i + 1}個` }));
+      const options = selectedVocab.map((_, i) => ({ jp: `第${i + 1}個`, cn: `第${i + 1}個` }));
       setQuizOptions(options);
       setSelectedAnswer(null);
       return;
@@ -276,10 +273,13 @@ export default function Home() {
       case 4:
         isCorrect = answer === correct.日文;
         break;
-      case 5:
-        const correctIndex = quizCurrentQ - 1;
+      case 5: {
+        // 听力排序题：检查答案是否在listeningOrder中的正确位置
+        const correctVocab = quizBatch[quizCurrentQ - 1];
+        const correctIndex = listeningOrder.findIndex(v => v.日文 === correctVocab.日文);
         isCorrect = answer === `第${correctIndex + 1}個`;
         break;
+      }
     }
     
     setSelectedAnswer(answer);
@@ -512,9 +512,9 @@ export default function Home() {
             <>
               <div className="quiz-question">{quizBatch[quizCurrentQ - 1]?.日文}</div>
               <button className="sound-btn btn-listen" onClick={() => {
-                listeningOrder.forEach((idx, i) => {
+                listeningOrder.forEach((vocab, i) => {
                   setTimeout(() => {
-                    speak(quizBatch[idx]?.讀音 || quizBatch[idx]?.日文);
+                    speak(vocab.讀音 || vocab.日文);
                   }, i * 1200);
                 });
               }}>🔊 依序播放發音</button>
