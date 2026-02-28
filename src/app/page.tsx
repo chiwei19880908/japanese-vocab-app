@@ -450,7 +450,7 @@ export default function Home() {
                   const isSelected = option.cn === selectedAnswer;
                   return (
                     <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
-                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''} ${!isSelected && isCorrect && selectedAnswer ? 'correct' : ''}`}>
                       {option.cn}
                     </button>
                   );
@@ -469,7 +469,7 @@ export default function Home() {
                   const isSelected = option.cn === selectedAnswer;
                   return (
                     <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
-                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''} ${!isSelected && isCorrect && selectedAnswer ? 'correct' : ''}`}>
                       {option.cn}
                     </button>
                   );
@@ -488,7 +488,7 @@ export default function Home() {
                   const isSelected = option.cn === selectedAnswer;
                   return (
                     <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
-                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''} ${!isSelected && isCorrect && selectedAnswer ? 'correct' : ''}`}>
                       {option.cn}
                     </button>
                   );
@@ -507,7 +507,7 @@ export default function Home() {
                   const isSelected = option.cn === selectedAnswer;
                   return (
                     <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
-                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''} ${!isSelected && isCorrect && selectedAnswer ? 'correct' : ''}`}>
                       {option.cn}
                     </button>
                   );
@@ -519,21 +519,22 @@ export default function Home() {
           {quizType === 5 && (
             <>
               <div className="quiz-question">{quizBatch[quizCurrentQ - 1]?.日文}</div>
-              <button className="sound-btn btn-listen" onClick={() => {
-                listeningOrder.forEach((vocab, i) => {
-                  setTimeout(() => {
-                    speak(vocab.讀音 || vocab.日文);
-                  }, i * 1200);
-                });
-              }}>🔊 依序播放發音</button>
+              <div className="listen-order">
+                {listeningOrder.map((vocab, i) => (
+                  <button key={i} className="sound-btn btn-listen" onClick={() => speak(vocab.讀音 || vocab.日文)}>
+                    第{i + 1}個 🔊
+                  </button>
+                ))}
+              </div>
               <div className="quiz-options">
                 {quizOptions.map((option, i) => {
-                  const correctIndex = quizCurrentQ - 1;
+                  const correctVocab = quizBatch[quizCurrentQ - 1];
+                  const correctIndex = listeningOrder.findIndex(v => v.日文 === correctVocab?.日文);
                   const isCorrect = option.cn === `第${correctIndex + 1}個`;
                   const isSelected = option.cn === selectedAnswer;
                   return (
                     <button key={i} onClick={() => !selectedAnswer && checkAnswer(option.cn)} disabled={!!selectedAnswer}
-                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''}`}>
+                      className={`quiz-option ${isSelected && isCorrect ? 'correct' : ''} ${isSelected && !isCorrect ? 'wrong' : ''} ${!isSelected && isCorrect && selectedAnswer ? 'correct' : ''}`}>
                       {option.cn}
                     </button>
                   );
