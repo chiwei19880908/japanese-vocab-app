@@ -172,29 +172,14 @@ export default function Home() {
   // Auto play in preview
   useEffect(() => {
     if (mode === 'preview' && previewBatch.length > 0) {
-      setTimeout(() => speak(previewBatch[previewIndex]?.讀音 || previewBatch[previewIndex]?.日文), 500);
     }
   }, [previewIndex, mode, previewBatch]);
 
-  // Auto play in quiz
-  useEffect(() => {
-    if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer) {
-      if (quizType === 5) {
-        setTimeout(() => {
-          speakSequential(listeningOrder.map(v => v.讀音 || v.日文), 1500);
-        }, 500);
-      } else {
-        setTimeout(() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文), 500);
-      }
-    }
-  }, [quizCurrentQ, mode, quizBatch, selectedAnswer, quizType, listeningOrder]);
+  // Quiz mode - no auto-play for mobile compatibility
+  // User must tap sound button to hear pronunciation
 
-  // SRS auto play
-  useEffect(() => {
-    if (srsMode && srsList.length > 0 && !showSrsAnswer) {
-      setTimeout(() => speak(srsList[srsIndex]?.讀音 || srsList[srsIndex]?.日文), 500);
-    }
-  }, [srsIndex, srsMode, srsList, showSrsAnswer]);
+  // SRS mode - no auto-play for mobile compatibility
+  // User can tap sound button to hear pronunciation
 
   const switchMode = (newMode: string, action?: () => void) => {
     const inProgress = (srsMode && srsIndex > 0 && !srsFinished) || (mode === 'quiz' && quizScore.total > 0 && !quizFinished);
