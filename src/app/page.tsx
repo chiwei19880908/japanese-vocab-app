@@ -181,7 +181,13 @@ export default function Home() {
       // 判断是否是最后一组
       const isLastBatch = currentBatchStart + batchSize >= previewBatch.length;
       setIsFinalReview(isLastBatch);
-      startQuizForBatch(currentBatchStart, batchSize);
+      
+      if (isLastBatch) {
+        // 总复习：测试全部10个
+        startQuizForBatch(0, previewBatch.length);
+      } else {
+        startQuizForBatch(currentBatchStart, batchSize);
+      }
     } else {
       setPreviewIndex(prev => prev + 1);
     }
