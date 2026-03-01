@@ -636,3 +636,39 @@ button {
 .xp-fill {
   background: linear-gradient(90deg, #fbbf24, #f59e0b);
 }
+
+/*** Audio Enable Overlay ***/
+.audio-enable-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(201, 166, 107, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  cursor: pointer;
+}
+
+.audio-enable-content {
+  text-align: center;
+  color: white;
+}
+
+.audio-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.audio-text {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.audio-subtext {
+  font-size: 14px;
+  opacity: 0.8;
+}
