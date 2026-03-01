@@ -10,6 +10,13 @@ interface Vocab {
 }
 
 function speak(text: string) {
+  // Try ElevenLabs first, fallback to Google
+  elevenLabsSpeak(text).then((ok) => {
+    if (!ok) googleSpeak(text);
+  });
+}
+
+function googleSpeak(text: string) {
   if ('speechSynthesis' in window) {
     speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
@@ -18,6 +25,32 @@ function speak(text: string) {
     speechSynthesis.speak(utterance);
   }
 }
+
+async function elevenLabsSpeak(text: string): Promise<boolean> {
+  try {
+    const res = await fetch('https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM?optimize_streaming_latency=0', {
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'Content-Type': 'application/json',
+        'xi-api-key': 'ecbc743012ef42158f843303fca874b1',
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      }),
+    });
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.play();
+    audio.onended = () => URL.revokeObjectURL(url);
+    return true;
+  } catch { return false; }
+}
+
 
 export default function Home() {
   const [vocabList, setVocabList] = useState<Vocab[]>([]);
