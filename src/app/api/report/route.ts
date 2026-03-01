@@ -17,10 +17,9 @@ export async function POST(request: Request) {
     const { vocab, issueType, description } = body;
 
     if (!vocab || !issueType) {
-({ error: "      return Response.jsonMissing required fields" }, { status: 400 });
+      return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Create a new page in the report database
     await notion.pages.create({
       parent: { database_id: REPORT_DB_ID },
       properties: {
