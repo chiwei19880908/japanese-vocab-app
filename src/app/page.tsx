@@ -12,19 +12,31 @@ interface Vocab {
 }
 
 function speak(text: string) {
-  // Use Google Translate TTS - works on mobile
-  const encodedText = encodeURIComponent(text);
-  const audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodedText}`);
-  audio.play().catch(() => {
-    // Fallback to Web Speech API
-    if ('speechSynthesis' in window) {
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ja-JP';
-      utterance.rate = 0.8;
+  // Try Web Speech API first - better mobile support
+  if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.8;
+    
+    // Try to get Japanese voice
+    const voices = speechSynthesis.getVoices();
+    const japaneseVoice = voices.find(v => v.lang.includes('ja'));
+    if (japaneseVoice) {
+      utterance.voice = japaneseVoice;
+    }
+    
+    // On mobile, we might need to wait for voices to load
+    if (voices.length === 0) {
+      speechSynthesis.addEventListener('voiceschanged', () => {
+        const v = speechSynthesis.getVoices().find(voice => voice.lang.includes('ja'));
+        if (v) utterance.voice = v;
+        speechSynthesis.speak(utterance);
+      }, { once: true });
+    } else {
       speechSynthesis.speak(utterance);
     }
-  });
+  }
 }
 
 export default function Home() {
