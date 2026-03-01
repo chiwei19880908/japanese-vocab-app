@@ -7,6 +7,8 @@ interface Vocab {
   讀音: string;
   中文: string;
   等級: string;
+  例句: string;
+  例句中文: string;
 }
 
 function speak(text: string) {
@@ -474,6 +476,12 @@ export default function Home() {
           
           <div className="vocab-kana">{previewBatch[previewIndex]?.讀音}</div>
           <div className="vocab-chinese">{previewBatch[previewIndex]?.中文}</div>
+          {previewBatch[previewIndex]?.例句 && (
+            <div className="vocab-example">
+              <div className="example-jp">📝 {previewBatch[previewIndex]?.例句}</div>
+              <div className="example-cn">{previewBatch[previewIndex]?.例句中文}</div>
+            </div>
+          )}
           
           <div className="card-actions">
             <button className="btn-primary btn-large" onClick={nextPreview}>
