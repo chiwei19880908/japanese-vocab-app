@@ -27,8 +27,8 @@ function googleSpeak(text: string) {
 }
 
 async function elevenLabsSpeak(text: string): Promise<boolean> {
-  try {
-    const res = await fetch('https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM?optimize_streaming_latency=0', {
+  return new Promise((resolve) => {
+    fetch('https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM?optimize_streaming_latency=0', {
       method: 'POST',
       headers: {
         'Accept': 'audio/mpeg',
@@ -40,15 +40,33 @@ async function elevenLabsSpeak(text: string): Promise<boolean> {
         model_id: 'eleven_multilingual_v2',
         voice_settings: { stability: 0.5, similarity_boost: 0.75 },
       }),
-    });
-    if (!res.ok) return false;
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audio.play();
-    audio.onended = () => URL.revokeObjectURL(url);
-    return true;
-  } catch { return false; }
+    })
+    .then(res => {
+      if (!res.ok) { resolve(false); return; }
+      return res.blob();
+    })
+    .then(blob => {
+      if (!blob) { resolve(false); return; }
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.play();
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        resolve(true);
+      };
+      audio.onerror = () => { resolve(false); };
+    })
+    .catch(() => { resolve(false); });
+  });
+}
+
+// Sequential play for quiz - waits for each to finish
+async function speakSequential(texts: string[], delayMs: number = 1500): Promise<void> {
+  for (const text of texts) {
+    const ok = await elevenLabsSpeak(text);
+    if (!ok) googleSpeak(text);
+    await new Promise(r => setTimeout(r, delayMs));
+  }
 }
 
 
@@ -154,11 +172,7 @@ export default function Home() {
     if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer) {
       if (quizType === 5) {
         setTimeout(() => {
-          listeningOrder.forEach((vocab, i) => {
-            setTimeout(() => {
-              speak(vocab.讀音 || vocab.日文);
-            }, i * 1200);
-          });
+          speakSequential(listeningOrder.map(v => v.讀音 || v.日文), 1500);
         }, 500);
       } else {
         setTimeout(() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文), 500);
