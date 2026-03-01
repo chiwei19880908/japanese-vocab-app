@@ -3,7 +3,7 @@ import { Client } from "@notionhq/client";
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 const MOCK_VOCAB = [
-  { 日文: "測試", 讀音: "てすと", 中文: "測試", 等級: "N5" },
+  { 日文: "測試", 讀音: "てすと", 中文: "測試", 等級: "N5", 例句: "", 例句中文: "" },
 ];
 
 export async function GET() {
@@ -51,6 +51,8 @@ export async function GET() {
         讀音: props["讀音"]?.rich_text?.[0]?.text?.content || "",
         中文: props["中文"]?.rich_text?.[0]?.text?.content || "",
         等級: props["等級"]?.select?.name || "N5",
+        例句: props["例句"]?.rich_text?.[0]?.text?.content || "",
+        例句中文: props["例句中文"]?.rich_text?.[0]?.text?.content || "",
       };
     }).filter((v: any) => v.日文);
 
