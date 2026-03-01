@@ -122,6 +122,13 @@ export default function Home() {
   // Distributed learning
   const [isFinalReview, setIsFinalReview] = useState(false);
   const [quizBatchStart, setQuizBatchStart] = useState(0);
+  
+  // Report modal
+  const [showReport, setShowReport] = useState(false);
+  const [reportVocab, setReportVocab] = useState("");
+  const [reportType, setReportType] = useState("例句錯誤");
+  const [reportDesc, setReportDesc] = useState("");
+  const [reportSent, setReportSent] = useState(false);
 
   useEffect(() => {
     fetch('/api/vocab')
@@ -197,6 +204,30 @@ export default function Home() {
     } else {
       if (action) action();
       setMode(newMode);
+    }
+  };
+
+  const submitReport = async () => {
+    try {
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vocab: reportVocab,
+          issueType: reportType,
+          description: reportDesc
+        })
+      });
+      if (res.ok) {
+        setReportSent(true);
+        setTimeout(() => {
+          setShowReport(false);
+          setReportSent(false);
+          setReportDesc("");
+        }, 2000);
+      }
+    } catch (e) {
+      alert("回報失敗，請稍後再試");
     }
   };
 
@@ -424,6 +455,34 @@ export default function Home() {
         </div>
       )}
 
+      {showReport && (
+        <div className="report-modal">
+          <div className="report-modal-content">
+            <h3>⚠️ 回報問題</h3>
+            <p>單字: <strong>{reportVocab}</strong></p>
+            <select value={reportType} onChange={(e) => setReportType(e.target.value)}>
+              <option value="例句錯誤">例句錯誤</option>
+              <option value="例句中文錯誤">例句中文錯誤</option>
+              <option value="發音錯誤">發音錯誤</option>
+              <option value="翻譯錯誤">翻譯錯誤</option>
+              <option value="其他">其他</option>
+            </select>
+            <textarea 
+              placeholder="補充說明（選填）" 
+              value={reportDesc}
+              onChange={(e) => setReportDesc(e.target.value)}
+              rows={3}
+            />
+            <div className="report-modal-buttons">
+              <button className="btn-secondary" onClick={() => setShowReport(false)}>取消</button>
+              <button className="btn-primary" onClick={submitReport} disabled={reportSent}>
+                {reportSent ? "✓ 已送出" : "送出回報"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="header">
         <h1>🇯🇵 日文單字庫</h1>
         
@@ -490,6 +549,7 @@ export default function Home() {
           </div>
           <div className="card-footer">
             <button onClick={() => setMode('list')}>退出</button>
+            <button className="btn-report" onClick={() => { setReportVocab(previewBatch[previewIndex]?.日文); setShowReport(true); }}>⚠️ 回報</button>
           </div>
         </div>
       )}
@@ -615,6 +675,7 @@ export default function Home() {
           )}
           <div className="card-footer">
             <button onClick={() => setMode('list')}>退出</button>
+            <button className="btn-report" onClick={() => { setReportVocab(previewBatch[previewIndex]?.日文); setShowReport(true); }}>⚠️ 回報</button>
           </div>
         </div>
       )}
