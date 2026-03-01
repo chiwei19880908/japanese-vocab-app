@@ -207,10 +207,12 @@ export default function Home() {
     const correct = batch[qNum - 1];
     
     if (newQuizType === 5) {
-      // 听力排序题：从全部单字中选4个，确保有4个选项
-      const allVocab = [...filteredList].sort(() => Math.random() - 0.5);
-      const orderCount = 4;
-      const selectedVocab = allVocab.slice(0, orderCount);
+      // 听力排序题：确保正确答案在4个选项中
+      const others = [...filteredList]
+        .filter(v => v.日文 !== correct.日文)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+      const selectedVocab = [correct, ...others].sort(() => Math.random() - 0.5);
       setListeningOrder(selectedVocab);
       
       const options = selectedVocab.map((_, i) => ({ jp: `第${i + 1}個`, cn: `第${i + 1}個` }));
