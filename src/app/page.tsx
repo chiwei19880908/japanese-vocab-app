@@ -549,7 +549,11 @@ export default function Home() {
           </div>
           <div className="card-footer">
             <button onClick={() => setMode('list')}>退出</button>
-            <button className="btn-report" onClick={() => { setReportVocab(previewBatch[previewIndex]?.日文); setShowReport(true); }}>⚠️ 回報</button>
+            <button className="btn-report" onClick={() => { 
+              const currentVocab = previewBatch[previewIndex];
+              setReportVocab(currentVocab?.日文); 
+              setShowReport(true); 
+            }}>⚠️ 回報</button>
           </div>
         </div>
       )}
@@ -675,7 +679,11 @@ export default function Home() {
           )}
           <div className="card-footer">
             <button onClick={() => setMode('list')}>退出</button>
-            <button className="btn-report" onClick={() => { setReportVocab(previewBatch[previewIndex]?.日文); setShowReport(true); }}>⚠️ 回報</button>
+            <button className="btn-report" onClick={() => { 
+              const currentVocab = previewBatch[previewIndex];
+              setReportVocab(currentVocab?.日文); 
+              setShowReport(true); 
+            }}>⚠️ 回報</button>
           </div>
         </div>
       )}
@@ -697,6 +705,11 @@ export default function Home() {
           <div className="card-actions">
             <button className="btn-primary btn-large" onClick={() => { startPreview(); }}>再學一次</button>
             <button className="btn-secondary btn-large" onClick={() => setMode('list')}>回到列表</button>
+            <button className="btn-report" onClick={() => { 
+              const currentVocab = quizBatch[quizCurrentQ - 1];
+              setReportVocab(currentVocab?.日文); 
+              setShowReport(true); 
+            }}>⚠️ 回報</button>
           </div>
         </div>
       )}
