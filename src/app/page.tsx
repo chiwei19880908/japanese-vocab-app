@@ -12,65 +12,20 @@ interface Vocab {
 }
 
 function speak(text: string) {
-  // Try ElevenLabs first, fallback to Google
-  elevenLabsSpeak(text).then((ok) => {
-    if (!ok) googleSpeak(text);
+  // Use Google Translate TTS - works on mobile
+  const encodedText = encodeURIComponent(text);
+  const audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&tl=ja&client=tw-ob&q=${encodedText}`);
+  audio.play().catch(() => {
+    // Fallback to Web Speech API
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ja-JP';
+      utterance.rate = 0.8;
+      speechSynthesis.speak(utterance);
+    }
   });
 }
-
-function googleSpeak(text: string) {
-  if ('speechSynthesis' in window) {
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    utterance.rate = 0.8;
-    speechSynthesis.speak(utterance);
-  }
-}
-
-async function elevenLabsSpeak(text: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    fetch('https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM?optimize_streaming_latency=0', {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': 'ecbc743012ef42158f843303fca874b1',
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-      }),
-    })
-    .then(res => {
-      if (!res.ok) { resolve(false); return; }
-      return res.blob();
-    })
-    .then(blob => {
-      if (!blob) { resolve(false); return; }
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.play();
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        resolve(true);
-      };
-      audio.onerror = () => { resolve(false); };
-    })
-    .catch(() => { resolve(false); });
-  });
-}
-
-// Sequential play for quiz - waits for each to finish
-async function speakSequential(texts: string[], delayMs: number = 1500): Promise<void> {
-  for (const text of texts) {
-    const ok = await elevenLabsSpeak(text);
-    if (!ok) googleSpeak(text);
-    await new Promise(r => setTimeout(r, delayMs));
-  }
-}
-
 
 export default function Home() {
   const [vocabList, setVocabList] = useState<Vocab[]>([]);
@@ -169,17 +124,26 @@ export default function Home() {
 
   const filteredList = level === 'all' ? vocabList : vocabList.filter(v => v.等級 === level);
 
-  // Auto play in preview
+  // Auto play in preview - try to play, will fail silently if blocked
   useEffect(() => {
     if (mode === 'preview' && previewBatch.length > 0) {
+      setTimeout(() => speak(previewBatch[previewIndex]?.讀音 || previewBatch[previewIndex]?.日文), 800);
     }
   }, [previewIndex, mode, previewBatch]);
 
-  // Quiz mode - no auto-play for mobile compatibility
-  // User must tap sound button to hear pronunciation
+  // Quiz mode - auto-play
+  useEffect(() => {
+    if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer) {
+      setTimeout(() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文), 800);
+    }
+  }, [quizCurrentQ, mode, quizBatch, selectedAnswer]);
 
-  // SRS mode - no auto-play for mobile compatibility
-  // User can tap sound button to hear pronunciation
+  // SRS mode - auto-play
+  useEffect(() => {
+    if (srsMode && srsList.length > 0 && !showSrsAnswer) {
+      setTimeout(() => speak(srsList[srsIndex]?.讀音 || srsList[srsIndex]?.日文), 800);
+    }
+  }, [srsIndex, srsMode, srsList, showSrsAnswer]);
 
   const switchMode = (newMode: string, action?: () => void) => {
     const inProgress = (srsMode && srsIndex > 0 && !srsFinished) || (mode === 'quiz' && quizScore.total > 0 && !quizFinished);
