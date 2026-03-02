@@ -10,34 +10,30 @@ export async function GET() {
   const apiKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DATABASE_ID;
   
-  // Debug: log what's set (but not the actual values)
-  console.log('API Key set:', !!apiKey);
-  console.log('DB ID set:', !!dbId);
-  console.log('DB ID value:', dbId);
-  
   if (!apiKey || !dbId) {
     return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: "Missing env vars" });
   }
 
   try {
-    const allResults: any[] = [];
-    let cursor: string | undefined = undefined;
+    // Use notion.databases.query through SDK
+    const response = await notion.databases.query({
+      database_id: dbId,
+      page_size: 100,
+    });
     
-    // Use SDK request method to query databases
-    do {
-      const response: any = await (notion as any).request({
-        method: 'POST',
-        path: `/v1/databases/${dbId}/query`,
-        body: {
-          page_size: 100,
-          ...(cursor ? { start_cursor: cursor } : {})
-        }
+    let allResults = [...response.results];
+    let nextCursor = response.next_cursor;
+    
+    // Get more pages if available
+    while (nextCursor) {
+      const nextPage: any = await notion.databases.query({
+        database_id: dbId,
+        page_size: 100,
+        start_cursor: nextCursor,
       });
-      
-      console.log('Query response:', response.results?.length || 0, 'items');
-      allResults.push(...response.results);
-      cursor = response.next_cursor;
-    } while (cursor);
+      allResults = [...allResults, ...nextPage.results];
+      nextCursor = nextPage.next_cursor;
+    }
 
     // Extract vocab list and unique levels
     const vocabList = allResults.map((page: any) => {
