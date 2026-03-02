@@ -871,9 +871,16 @@ export default function Home() {
           })}
           
           {/* Show count */}
-          {level === "all" && visibleCount < vocabList.length && (
+          {level === "all" && !loading && visibleCount < filteredList.length && (
             <div className="loading-more">
               向下滾動載入更多...
+            </div>
+          )}
+          
+          {/* Loading indicator */}
+          {loading && (
+            <div className="loading-more">
+              載入中...
             </div>
           )}
         </div>
