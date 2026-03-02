@@ -178,7 +178,10 @@ export default function Home() {
   };
 
   const submitReport = async () => {
+    if (reportSent) return; // Prevent double click
+    
     try {
+      setReportSent(true);
       const res = await fetch('/api/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -189,15 +192,24 @@ export default function Home() {
         })
       });
       if (res.ok) {
-        setReportSent(true);
+        // Show success message, then close after delay
         setTimeout(() => {
           setShowReport(false);
-          setReportSent(false);
-          setReportDesc("");
-        }, 2000);
+          // Reset after closing
+          setTimeout(() => {
+            setReportSent(false);
+            setReportDesc("");
+          }, 300);
+        }, 1500);
+      } else {
+        setReportSent(false);
+        alert("回報失敗，請稍後再試");
       }
     } catch (e) {
+      setReportSent(false);
       alert("回報失敗，請稍後再試");
+    }
+  };
     }
   };
 
@@ -446,7 +458,7 @@ export default function Home() {
             <div className="report-modal-buttons">
               <button className="btn-secondary" onClick={() => setShowReport(false)}>取消</button>
               <button className="btn-primary" onClick={submitReport} disabled={reportSent}>
-                {reportSent ? "✓ 已送出" : "送出回報"}
+                {reportSent ? "🙏 感謝您的回報！" : "送出回報"}
               </button>
             </div>
           </div>
