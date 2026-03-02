@@ -9,7 +9,6 @@ export async function GET(request: Request) {
   const apiKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DATABASE_ID;
   
-  // Parse query params
   const url = new URL(request.url);
   const page = parseInt(url.searchParams.get('page') || '0');
   const size = parseInt(url.searchParams.get('size') || '50');
@@ -24,7 +23,19 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Use fetch directly instead of SDK
+    // Get total count first
+    const countResponse = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Notion-Version': '2025-09-03',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ page_size: 1 })
+    });
+    
+    // Notion doesn't give total count easily, so we estimate
+    // Get first page
     const response = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
       method: 'POST',
       headers: {
@@ -32,10 +43,7 @@ export async function GET(request: Request) {
         'Notion-Version': '2025-09-03',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ 
-        page_size: size,
-        start_cursor: page > 0 ? `page_${page}` : undefined
-      })
+      body: JSON.stringify({ page_size: size })
     });
     
     const data = await response.json();
@@ -44,14 +52,9 @@ export async function GET(request: Request) {
       return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: data.message });
     }
     
-    // For now, just return first page (Notion cursor is complex)
-    // In a real implementation, you'd track cursors properly
     let allResults = [...(data.results || [])];
+    const hasMore = data.has_more;
     
-    // Calculate hasMore based on returned count
-    const hasMore = allResults.length === size;
-
-    // Extract vocab list and unique levels
     const vocabList = allResults.map((page: any) => {
       const props = page.properties;
       return {
@@ -66,10 +69,12 @@ export async function GET(request: Request) {
 
     const levels = Array.from(new Set(vocabList.map((v: any) => v.等級))).sort();
 
+    // Estimate total (Notion doesn't give exact count)
+    // We'll return hasMore and let frontend handle
     return Response.json({ 
       vocabList, 
       levels,
-      total: hasMore ? (page + 1) * size + 100 : vocabList.length,
+      total: hasMore ? (page + 1) * size + 50 : vocabList.length,
       hasMore 
     });
   } catch (error: any) {

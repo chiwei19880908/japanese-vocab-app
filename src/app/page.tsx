@@ -534,7 +534,19 @@ export default function Home() {
       </header>
 
       <div className="controls">
-        <select value={level} onChange={(e) => { setLevel(e.target.value); }}>
+        <select value={level} onChange={(e) => { 
+          setLevel(e.target.value); 
+          setVocabList([]);
+          setPage(0);
+          setHasMore(true);
+          // Reload for new level
+          fetch(`/api/vocab?page=0&size=${PAGE_SIZE}&level=${e.target.value}`)
+            .then(res => res.json())
+            .then(data => {
+              setVocabList(data.vocabList || []);
+              setHasMore(data.hasMore !== false);
+            });
+        }}>
           <option value="all">全部</option>
           {levels.map((l) => <option key={l} value={l}>{l}</option>)}
         </select>
@@ -809,11 +821,16 @@ export default function Home() {
             );
           })}
           
-          {/* Lazy loading trigger */}
-          {level === 'all' && hasMore && (
-            <div ref={loadMoreRef} className="loading-more">
-              {loadingMore ? '載入更多...' : '向下滾動載入更多'}
-            </div>
+          {/* Load More button */}
+          {level === "all" && hasMore && (
+            <button 
+              className="btn-secondary" 
+              style={{ width: '100%', marginTop: 16 }}
+              onClick={loadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? '載入中...' : `載入更多 (已載入 ${vocabList.length} 個)`}
+            </button>
           )}
           
           {level !== 'all' && (
