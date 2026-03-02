@@ -18,30 +18,20 @@ export async function GET() {
     const allResults: any[] = [];
     let cursor: string | undefined = undefined;
     
-    // Try databases.query first
+    // Use raw request to data_sources endpoint (works for connected databases)
     do {
-      const response: any = await notion.databases.query({
-        database_id: dbId,
-        page_size: 100,
-        start_cursor: cursor,
+      const response: any = await (notion as any).request({
+        method: 'POST',
+        path: `/v1/data_sources/${dbId}/query`,
+        body: {
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {})
+        }
       });
       
       allResults.push(...response.results);
       cursor = response.next_cursor;
     } while (cursor);
-
-    // If we no results, try got here but data_sources
-    if (allResults.length === 0) {
-      do {
-        const response: any = await (notion as any).request({
-          method: 'POST',
-          path: `/v1/data_sources/${dbId}/query`,
-          body: { page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }
-        });
-        allResults.push(...response.results);
-        cursor = response.next_cursor;
-      } while (cursor);
-    }
 
     // Extract vocab list and unique levels
     const vocabList = allResults.map((page: any) => {
