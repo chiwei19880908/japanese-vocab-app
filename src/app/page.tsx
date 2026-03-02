@@ -159,17 +159,19 @@ export default function Home() {
   useEffect(() => {
     if (!hasMore || loadingMore || level !== 'all') return;
     
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore && !loadingMore) {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+      
+      // When user scrolls to within 200px of bottom, load more
+      if (scrollTop + windowHeight >= docHeight - 200) {
         loadMore();
       }
-    }, { threshold: 0.1 });
+    };
     
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-    
-    return () => observer.disconnect();
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [hasMore, loadingMore, level, loadMore]);
 
   useEffect(() => {
@@ -821,16 +823,11 @@ export default function Home() {
             );
           })}
           
-          {/* Load More button */}
+          {/* Loading indicator */}
           {level === "all" && hasMore && (
-            <button 
-              className="btn-secondary" 
-              style={{ width: '100%', marginTop: 16 }}
-              onClick={loadMore}
-              disabled={loadingMore}
-            >
-              {loadingMore ? '載入中...' : `載入更多 (已載入 ${vocabList.length} 個)`}
-            </button>
+            <div className="loading-more">
+              {loadingMore ? '載入中...' : '向下滾動載入更多'}
+            </div>
           )}
           
           {level !== 'all' && (
