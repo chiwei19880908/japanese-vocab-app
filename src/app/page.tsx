@@ -43,11 +43,7 @@ export default function Home() {
   const [vocabList, setVocabList] = useState<Vocab[]>([]);
   const [allVocabCount, setAllVocabCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(0);
-  const PAGE_SIZE = 50;
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(50);
   const [levels, setLevels] = useState<string[]>(['N5', 'N4', 'N3', 'N2', 'N1']);
   const [level, setLevel] = useState('all');
 
@@ -103,15 +99,13 @@ export default function Home() {
   const [reportDesc, setReportDesc] = useState("");
   const [reportSent, setReportSent] = useState(false);
 
-  // Initial load with pagination
+  // Initial load - fetch all but render partially
   useEffect(() => {
-    fetch(`/api/vocab?page=0&size=${PAGE_SIZE}`)
+    fetch("/api/vocab")
       .then(res => res.json())
       .then(data => {
         setVocabList(data.vocabList || []);
-        setAllVocabCount(data.total || 0);
-        setHasMore(data.hasMore !== false && data.vocabList?.length === PAGE_SIZE);
-        setPage(0);
+        setAllVocabCount(data.total || data.vocabList?.length || 0);
         if (data.levels && data.levels.length > 0) {
           setLevels(data.levels);
         }
@@ -140,39 +134,48 @@ export default function Home() {
     }
   }, []);
 
-  const loadMore = useCallback(() => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    const nextPage = page + 1;
-    fetch(`/api/vocab?page=${nextPage}&size=${PAGE_SIZE}`)
-      .then(res => res.json())
-      .then(data => {
-        setVocabList(prev => [...prev, ...(data.vocabList || [])]);
-        setHasMore(data.hasMore !== false && data.vocabList?.length === PAGE_SIZE);
-        setPage(nextPage);
-        setLoadingMore(false);
-      })
-      .catch(() => setLoadingMore(false));
-  }, [page, hasMore, loadingMore]);
-
-  // Scroll detection for lazy loading
+  // Scroll detection - show more items
   useEffect(() => {
-    if (!hasMore || loadingMore || level !== 'all') return;
+    if (level !== 'all') return;
     
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const windowHeight = window.innerHeight;
       const docHeight = document.documentElement.scrollHeight;
       
-      // When user scrolls to within 200px of bottom, load more
+      // When user scrolls to within 200px of bottom, show more
       if (scrollTop + windowHeight >= docHeight - 200) {
-        loadMore();
+        setVisibleCount(prev => Math.min(prev + 50, vocabList.length));
       }
     };
     
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, level, loadMore]);
+  }, [level, vocabList.length]);
+
+  // Reset visible count when level changes
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [level]);
+
+  // Scroll detection - show more items
+  useEffect(() => {
+    if (level !== 'all') return;
+    
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+      
+      // When user scrolls to within 200px of bottom, show more
+      if (scrollTop + windowHeight >= docHeight - 200) {
+        setVisibleCount(prev => Math.min(prev + 50, vocabList.length));
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [level, vocabList.length]);
 
   useEffect(() => {
     localStorage.setItem('japanese-vocab-stats', JSON.stringify(userStats));
@@ -538,16 +541,7 @@ export default function Home() {
       <div className="controls">
         <select value={level} onChange={(e) => { 
           setLevel(e.target.value); 
-          setVocabList([]);
-          setPage(0);
-          setHasMore(true);
-          // Reload for new level
-          fetch(`/api/vocab?page=0&size=${PAGE_SIZE}&level=${e.target.value}`)
-            .then(res => res.json())
-            .then(data => {
-              setVocabList(data.vocabList || []);
-              setHasMore(data.hasMore !== false);
-            });
+          setVisibleCount(50);
         }}>
           <option value="all">全部</option>
           {levels.map((l) => <option key={l} value={l}>{l}</option>)}
@@ -804,8 +798,8 @@ export default function Home() {
       {/* List Mode */}
       {mode === 'list' && !srsMode && (
         <div className="vocab-list">
-          <div className="list-info">共 {allVocabCount || filteredList.length} 個單字 • 已記住 {masteredCount}</div>
-          {filteredList.map((vocab, i) => {
+          <div className="list-info">共 {allVocabCount || filteredList.length} 個單字 • 已記住 {masteredCount} • 顯示 {Math.min(visibleCount, filteredList.length)}</div>
+          {filteredList.slice(0, visibleCount).map((vocab, i) => {
             const learned = learnedCount[vocab.日文] || 0;
             return (
               <div key={i} className="vocab-item">
@@ -823,16 +817,10 @@ export default function Home() {
             );
           })}
           
-          {/* Loading indicator */}
-          {level === "all" && hasMore && (
+          {/* Show count */}
+          {level === "all" && visibleCount < filteredList.length && (
             <div className="loading-more">
-              {loadingMore ? '載入中...' : '向下滾動載入更多'}
-            </div>
-          )}
-          
-          {level !== 'all' && (
-            <div className="loading-more">
-              篩選模式：顯示 {filteredList.length} 個單字
+              向下滾動載入更多...
             </div>
           )}
         </div>

@@ -9,52 +9,42 @@ export async function GET(request: Request) {
   const apiKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DATABASE_ID;
   
-  const url = new URL(request.url);
-  const page = parseInt(url.searchParams.get('page') || '0');
-  const size = parseInt(url.searchParams.get('size') || '50');
-  
   if (!apiKey || !dbId) {
-    return Response.json({ 
-      vocabList: MOCK_VOCAB, 
-      levels: ["N5"], 
-      total: 1,
-      hasMore: false 
-    });
+    return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"] });
   }
 
   try {
-    // Get total count first
-    const countResponse = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Notion-Version': '2025-09-03',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ page_size: 1 })
-    });
+    let allResults: any[] = [];
+    let cursor: string | null = null;
     
-    // Notion doesn't give total count easily, so we estimate
-    // Get first page
-    const response = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Notion-Version': '2025-09-03',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ page_size: size })
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: data.message });
-    }
-    
-    let allResults = [...(data.results || [])];
-    const hasMore = data.has_more;
-    
+    // Fetch ALL data
+    do {
+      const body: any = { page_size: 100 };
+      if (cursor) body.start_cursor = cursor;
+      
+      const response = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Notion-Version': '2025-09-03',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: data.message });
+      }
+      
+      if (data.results) {
+        allResults = [...allResults, ...data.results];
+      }
+      cursor = data.next_cursor;
+    } while (cursor);
+
+    // Extract vocab list and unique levels
     const vocabList = allResults.map((page: any) => {
       const props = page.properties;
       return {
@@ -69,14 +59,7 @@ export async function GET(request: Request) {
 
     const levels = Array.from(new Set(vocabList.map((v: any) => v.等級))).sort();
 
-    // Estimate total (Notion doesn't give exact count)
-    // We'll return hasMore and let frontend handle
-    return Response.json({ 
-      vocabList, 
-      levels,
-      total: hasMore ? (page + 1) * size + 50 : vocabList.length,
-      hasMore 
-    });
+    return Response.json({ vocabList, levels, total: vocabList.length });
   } catch (error: any) {
     return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: error.message });
   }
