@@ -68,7 +68,9 @@ export async function GET(request: Request) {
       vocabList = vocabList.filter(v => v.等級 === level);
     }
 
-    return Response.json({ vocabList, levels, total: vocabList.length });
+    const response = Response.json({ vocabList, levels, total: vocabList.length });
+    response.headers.set("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
+    return response;
   } catch (error: any) {
     return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: error.message });
   }
