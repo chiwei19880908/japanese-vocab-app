@@ -15,53 +15,36 @@ export async function GET() {
   }
 
   try {
-    // Use fetch directly to avoid SDK issues
-    const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Notion-Version': '2025-09-03',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ page_size: 100 })
-    });
+    const allResults: any[] = [];
+    let cursor: string | null = null;
     
-    const data = await response.json();
-    
-    if (!data.results) {
-      console.log('No results, trying data_sources...');
-      // Fallback to data_sources
-      const response2 = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
+    // Use fetch with data_sources endpoint
+    do {
+      const body: any = { page_size: 100 };
+      if (cursor) body.start_cursor = cursor;
+      
+      const response = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Notion-Version': '2025-09-03',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ page_size: 100 })
+        body: JSON.stringify(body)
       });
-      const data2 = await response2.json();
-      var allResults = data2.results || [];
-    } else {
-      var allResults = data.results || [];
-    }
-
-    // Handle pagination
-    let cursor = data.next_cursor;
-    while (cursor) {
-      const nextResponse = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Notion-Version': '2025-09-03',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ page_size: 100, start_cursor: cursor })
-      });
-      const nextData = await nextResponse.json();
-      allResults = [...allResults, ...(nextData.results || [])];
-      cursor = nextData.next_cursor;
-    }
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Notion API error:', data.message);
+        return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"] });
+      }
+      
+      if (data.results) {
+        allResults.push(...data.results);
+      }
+      cursor = data.next_cursor;
+    } while (cursor);
 
     // Extract vocab list and unique levels
     const vocabList = allResults.map((page: any) => {
