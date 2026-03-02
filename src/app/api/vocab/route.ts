@@ -16,34 +16,21 @@ export async function GET() {
 
   try {
     const allResults: any[] = [];
-    let cursor: string | null = null;
+    let cursor: string | undefined = undefined;
     
-    // Use fetch with data_sources endpoint
+    // Use SDK request method to query databases
     do {
-      const body: any = { page_size: 100 };
-      if (cursor) body.start_cursor = cursor;
-      
-      const response = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
+      const response: any = await (notion as any).request({
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Notion-Version': '2025-09-03',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
+        path: `/v1/databases/${dbId}/query`,
+        body: {
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {})
+        }
       });
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.error('Notion API error:', data.message);
-        return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"] });
-      }
-      
-      if (data.results) {
-        allResults.push(...data.results);
-      }
-      cursor = data.next_cursor;
+      allResults.push(...response.results);
+      cursor = response.next_cursor;
     } while (cursor);
 
     // Extract vocab list and unique levels
