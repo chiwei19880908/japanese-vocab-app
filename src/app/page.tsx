@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface Vocab {
   日文: string;
@@ -41,7 +41,13 @@ function speak(text: string) {
 
 export default function Home() {
   const [vocabList, setVocabList] = useState<Vocab[]>([]);
+  const [allVocabCount, setAllVocabCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const [levels, setLevels] = useState<string[]>(['N5', 'N4', 'N3', 'N2', 'N1']);
   const [level, setLevel] = useState('all');
 
@@ -97,11 +103,15 @@ export default function Home() {
   const [reportDesc, setReportDesc] = useState("");
   const [reportSent, setReportSent] = useState(false);
 
+  // Initial load with pagination
   useEffect(() => {
-    fetch('/api/vocab')
+    fetch(`/api/vocab?page=0&size=${PAGE_SIZE}`)
       .then(res => res.json())
       .then(data => {
         setVocabList(data.vocabList || []);
+        setAllVocabCount(data.total || 0);
+        setHasMore(data.hasMore !== false && data.vocabList?.length === PAGE_SIZE);
+        setPage(0);
         if (data.levels && data.levels.length > 0) {
           setLevels(data.levels);
         }
@@ -129,6 +139,38 @@ export default function Home() {
       setUserStats(stats);
     }
   }, []);
+
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    fetch(`/api/vocab?page=${nextPage}&size=${PAGE_SIZE}`)
+      .then(res => res.json())
+      .then(data => {
+        setVocabList(prev => [...prev, ...(data.vocabList || [])]);
+        setHasMore(data.hasMore !== false && data.vocabList?.length === PAGE_SIZE);
+        setPage(nextPage);
+        setLoadingMore(false);
+      })
+      .catch(() => setLoadingMore(false));
+  }, [page, hasMore, loadingMore]);
+
+  // Scroll detection for lazy loading
+  useEffect(() => {
+    if (!hasMore || loadingMore || level !== 'all') return;
+    
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore && !loadingMore) {
+        loadMore();
+      }
+    }, { threshold: 0.1 });
+    
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+    
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, level, loadMore]);
 
   useEffect(() => {
     localStorage.setItem('japanese-vocab-stats', JSON.stringify(userStats));
@@ -208,8 +250,6 @@ export default function Home() {
     } catch (e) {
       setReportSent(false);
       alert("回報失敗，請稍後再試");
-    }
-  };
     }
   };
 
@@ -750,7 +790,7 @@ export default function Home() {
       {/* List Mode */}
       {mode === 'list' && !srsMode && (
         <div className="vocab-list">
-          <div className="list-info">共 {filteredList.length} 個單字 • 已記住 {masteredCount}</div>
+          <div className="list-info">共 {allVocabCount || filteredList.length} 個單字 • 已記住 {masteredCount}</div>
           {filteredList.map((vocab, i) => {
             const learned = learnedCount[vocab.日文] || 0;
             return (
@@ -768,6 +808,19 @@ export default function Home() {
               </div>
             );
           })}
+          
+          {/* Lazy loading trigger */}
+          {level === 'all' && hasMore && (
+            <div ref={loadMoreRef} className="loading-more">
+              {loadingMore ? '載入更多...' : '向下滾動載入更多'}
+            </div>
+          )}
+          
+          {level !== 'all' && (
+            <div className="loading-more">
+              篩選模式：顯示 {filteredList.length} 個單字
+            </div>
+          )}
         </div>
       )}
 

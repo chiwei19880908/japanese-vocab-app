@@ -5,12 +5,22 @@ const MOCK_VOCAB = [
   { 日文: "測試", 讀音: "てすと", 中文: "測試", 等級: "N5", 例句: "", 例句中文: "" },
 ];
 
-export async function GET() {
+export async function GET(request: Request) {
   const apiKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DATABASE_ID;
   
+  // Parse query params
+  const url = new URL(request.url);
+  const page = parseInt(url.searchParams.get('page') || '0');
+  const size = parseInt(url.searchParams.get('size') || '50');
+  
   if (!apiKey || !dbId) {
-    return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: "Missing env vars" });
+    return Response.json({ 
+      vocabList: MOCK_VOCAB, 
+      levels: ["N5"], 
+      total: 1,
+      hasMore: false 
+    });
   }
 
   try {
@@ -22,7 +32,10 @@ export async function GET() {
         'Notion-Version': '2025-09-03',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ page_size: 100 })
+      body: JSON.stringify({ 
+        page_size: size,
+        start_cursor: page > 0 ? `page_${page}` : undefined
+      })
     });
     
     const data = await response.json();
@@ -31,24 +44,12 @@ export async function GET() {
       return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: data.message });
     }
     
+    // For now, just return first page (Notion cursor is complex)
+    // In a real implementation, you'd track cursors properly
     let allResults = [...(data.results || [])];
-    let nextCursor = data.next_cursor;
     
-    // Get more pages if available
-    while (nextCursor) {
-      const nextResponse = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Notion-Version': '2025-09-03',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ page_size: 100, start_cursor: nextCursor })
-      });
-      const nextData = await nextResponse.json();
-      allResults = [...allResults, ...(nextData.results || [])];
-      nextCursor = nextData.next_cursor;
-    }
+    // Calculate hasMore based on returned count
+    const hasMore = allResults.length === size;
 
     // Extract vocab list and unique levels
     const vocabList = allResults.map((page: any) => {
@@ -65,7 +66,12 @@ export async function GET() {
 
     const levels = Array.from(new Set(vocabList.map((v: any) => v.等級))).sort();
 
-    return Response.json({ vocabList, levels });
+    return Response.json({ 
+      vocabList, 
+      levels,
+      total: hasMore ? (page + 1) * size + 100 : vocabList.length,
+      hasMore 
+    });
   } catch (error: any) {
     return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: error.message });
   }

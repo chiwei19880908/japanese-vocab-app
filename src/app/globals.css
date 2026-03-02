@@ -757,3 +757,10 @@ button {
 .btn-report:hover {
   opacity: 1;
 }
+
+.loading-more {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
