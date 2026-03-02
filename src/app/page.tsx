@@ -136,7 +136,7 @@ export default function Home() {
 
   // Scroll detection - show more items
   useEffect(() => {
-    if (level !== 'all') return;
+    if (level !== 'all') { setVisibleCount(prev => Math.min(prev + 50, filteredList.length)); } return;
     
     const handleScroll = () => {
       const scrollTop = window.scrollY;
@@ -160,7 +160,7 @@ export default function Home() {
 
   // Scroll detection - show more items
   useEffect(() => {
-    if (level !== 'all') return;
+    if (level !== 'all') { setVisibleCount(prev => Math.min(prev + 50, filteredList.length)); } return;
     
     const handleScroll = () => {
       const scrollTop = window.scrollY;
