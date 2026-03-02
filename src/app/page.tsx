@@ -134,10 +134,8 @@ export default function Home() {
     }
   }, []);
 
-  // Scroll detection - show more items
+  // Scroll detection - show more items for all levels
   useEffect(() => {
-    if (level !== 'all') { setVisibleCount(prev => Math.min(prev + 50, filteredList.length)); } return;
-    
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const windowHeight = window.innerHeight;
@@ -151,31 +149,8 @@ export default function Home() {
     
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [level, vocabList.length]);
+  }, [vocabList.length]);
 
-  // Reset visible count when level changes
-  useEffect(() => {
-    setVisibleCount(50);
-  }, [level]);
-
-  // Scroll detection - show more items
-  useEffect(() => {
-    if (level !== 'all') { setVisibleCount(prev => Math.min(prev + 50, filteredList.length)); } return;
-    
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const docHeight = document.documentElement.scrollHeight;
-      
-      // When user scrolls to within 200px of bottom, show more
-      if (scrollTop + windowHeight >= docHeight - 200) {
-        setVisibleCount(prev => Math.min(prev + 50, vocabList.length));
-      }
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [level, vocabList.length]);
 
   useEffect(() => {
     localStorage.setItem('japanese-vocab-stats', JSON.stringify(userStats));
@@ -798,7 +773,7 @@ export default function Home() {
       {/* List Mode */}
       {mode === 'list' && !srsMode && (
         <div className="vocab-list">
-          <div className="list-info">共 {allVocabCount || filteredList.length} 個單字 • 已記住 {masteredCount} • 顯示 {Math.min(visibleCount, filteredList.length)}</div>
+          <div className="list-info">共 {allVocabCount || vocabList.length} 個單字 • 已記住 {masteredCount} • 顯示 {Math.min(visibleCount, vocabList.length)}</div>
           {filteredList.slice(0, visibleCount).map((vocab, i) => {
             const learned = learnedCount[vocab.日文] || 0;
             return (
@@ -818,7 +793,7 @@ export default function Home() {
           })}
           
           {/* Show count */}
-          {level === "all" && visibleCount < filteredList.length && (
+          {level === "all" && visibleCount < vocabList.length && (
             <div className="loading-more">
               向下滾動載入更多...
             </div>
