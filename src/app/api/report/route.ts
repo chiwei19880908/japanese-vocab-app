@@ -3,7 +3,7 @@ import { Client } from "@notionhq/client";
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 // Database ID: 單字回報
-const REPORT_DB_ID = "eeab3d11-9721-48a1-b17e-040f4e468d07";
+const REPORT_DB_ID = process.env.NOTION_REPORT_DB_ID || "2406aa0650fb4802ae87a5eff0868271";
 
 export async function POST(request: Request) {
   const apiKey = process.env.NOTION_API_KEY;
