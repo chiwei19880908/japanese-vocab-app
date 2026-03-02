@@ -764,3 +764,57 @@ button {
   color: var(--text-muted);
   font-size: 14px;
 }
+
+/*** Achievement Celebration ***/
+.achievement-celebration {
+  background: linear-gradient(135deg, rgba(201, 166, 107, 0.95), rgba(139, 90, 43, 0.95));
+}
+
+.celebration-content {
+  text-align: center;
+  color: white;
+  animation: bounceIn 0.5s ease;
+}
+
+.celebration-icon {
+  font-size: 80px;
+  margin-bottom: 16px;
+}
+
+.celebration-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.celebration-name {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.celebration-desc {
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/*** Achievement Badge in Header ***/
+.achievement-badge {
+  display: inline-block;
+  font-size: 20px;
+  margin: 0 2px;
+  opacity: 0.3;
+  filter: grayscale(1);
+  transition: all 0.3s ease;
+}
+
+.achievement-badge.unlocked {
+  opacity: 1;
+  filter: grayscale(0);
+}

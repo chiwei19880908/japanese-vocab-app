@@ -56,6 +56,49 @@ export default function Home() {
     return { xp: 0, level: 1, streak: 0, lastDate: null, dailyGoal: 10, todayCount: 0 };
   });
 
+  // Achievement system
+  const achievementsList = [
+    { id: 'first_learn', name: '初學者', desc: '學習第一個單字', icon: '🌟', need: (s: any) => s.todayCount >= 1 },
+    { id: 'daily_10', name: '小試身手', desc: '一天學習10個單字', icon: '📚', need: (s: any) => s.todayCount >= 10 },
+    { id: 'daily_30', name: '貪心的小和尚', desc: '一天學習30個單字', icon: '📖', need: (s: any) => s.todayCount >= 30 },
+    { id: 'streak_3', name: '三日獵人', desc: '連續登入3天', icon: '🔥', need: (s: any) => s.streak >= 3 },
+    { id: 'streak_7', name: '一週戰士', desc: '連續登入7天', icon: '💪', need: (s: any) => s.streak >= 7 },
+    { id: 'streak_30', name: '一個月的毅力', desc: '連續登入30天', icon: '🏆', need: (s: any) => s.streak >= 30 },
+    { id: 'level_5', name: '小有成就', desc: '達到Lv.5', icon: '⭐', need: (s: any) => s.level >= 5 },
+    { id: 'level_10', name: '日語達人', desc: '達到Lv.10', icon: '🌸', need: (s: any) => s.level >= 10 },
+    { id: 'quiz_perfect', name: '完美主義者', desc: '測驗全對', icon: '💯', need: (s: any, perfect: boolean) => perfect },
+    { id: 'vocab_100', name: '單字收集者', desc: '學會100個單字', icon: '📕', need: (s: any) => (s.totalLearned || 0) >= 100 },
+    { id: 'vocab_300', name: '三百壯士', desc: '學會300個單字', icon: '📗', need: (s: any) => (s.totalLearned || 0) >= 300 },
+    { id: 'vocab_500', name: '五百賢者', desc: '學會500個單字', icon: '📘', need: (s: any) => (s.totalLearned || 0) >= 500 },
+  ];
+
+  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('japanese-vocab-achievements');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  const [showAchievement, setShowAchievement] = useState<any>(null);
+
+  const checkAchievements = (perfectQuiz = false) => {
+    const learnedCount2 = Object.values(learnedCount).filter((c: any) => c >= 3).length;
+    const stats = { ...userStats, totalLearned: learnedCount2 };
+    
+    for (const ach of achievementsList) {
+      if (!unlockedAchievements.includes(ach.id)) {
+        if (ach.need(stats, perfectQuiz)) {
+          setShowAchievement(ach);
+          const newUnlocked = [...unlockedAchievements, ach.id];
+          setUnlockedAchievements(newUnlocked);
+          localStorage.setItem('japanese-vocab-achievements', JSON.stringify(newUnlocked));
+          break;
+        }
+      }
+    }
+  };
+
   // Mode: 'list' | 'preview' | 'quiz'
   const [mode, setMode] = useState('list');
   
@@ -401,6 +444,8 @@ export default function Home() {
     if (nextQ > quizBatch.length) {
       if (isFinalReview) {
         setQuizFinished(true);
+        const perfect = quizScore.correct === quizScore.total;
+        if (perfect) checkAchievements(true);
       } else {
         // 测验完这组后，继续预览下一组
         const nextBatchStart = currentBatchStart + batchSize;
@@ -469,6 +514,18 @@ export default function Home() {
         </div>
       )}
 
+      {/* Achievement Celebration */}
+      {showAchievement && (
+        <div className="modal-overlay achievement-celebration" onClick={() => setShowAchievement(null)}>
+          <div className="celebration-content">
+            <div className="celebration-icon">{showAchievement.icon}</div>
+            <div className="celebration-title">🎉 成就解鎖！</div>
+            <div className="celebration-name">{showAchievement.name}</div>
+            <div className="celebration-desc">{showAchievement.desc}</div>
+          </div>
+        </div>
+      )}
+
       {showReport && (
         <div className="report-modal">
           <div className="report-modal-content">
@@ -514,6 +571,15 @@ export default function Home() {
             <span className="stat-icon">🔥</span>
             <span className="stat-value">{userStats.streak}天</span>
           </div>
+        </div>
+
+        {/* Achievement Badges */}
+        <div className="achievement-badges" style={{textAlign: 'center', marginTop: 8}}>
+          {achievementsList.slice(0, 6).map((ach: any) => (
+            <span key={ach.id} className={`achievement-badge ${unlockedAchievements.includes(ach.id) ? 'unlocked' : ''}`} title={ach.name}>
+              {ach.icon}
+            </span>
+          ))}
         </div>
         
         {/* Daily Progress */}
