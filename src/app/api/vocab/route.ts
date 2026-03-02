@@ -18,10 +18,10 @@ export async function GET() {
   }
 
   try {
-    // Use raw request to avoid SDK type issues
+    // Use data_sources endpoint - works for this integration
     const response: any = await (notion as any).request({
       method: 'POST',
-      path: `/v1/databases/${dbId}/query`,
+      path: `/v1/data_sources/${dbId}/query`,
       body: { page_size: 100 }
     });
     
@@ -32,7 +32,7 @@ export async function GET() {
     while (nextCursor) {
       const nextPage: any = await (notion as any).request({
         method: 'POST',
-        path: `/v1/databases/${dbId}/query`,
+        path: `/v1/data_sources/${dbId}/query`,
         body: { page_size: 100, start_cursor: nextCursor }
       });
       allResults = [...allResults, ...nextPage.results];
