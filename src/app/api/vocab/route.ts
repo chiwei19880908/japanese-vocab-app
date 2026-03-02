@@ -10,8 +10,13 @@ export async function GET() {
   const apiKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DATABASE_ID;
   
+  // Debug: log what's set (but not the actual values)
+  console.log('API Key set:', !!apiKey);
+  console.log('DB ID set:', !!dbId);
+  console.log('DB ID value:', dbId);
+  
   if (!apiKey || !dbId) {
-    return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"] });
+    return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: "Missing env vars" });
   }
 
   try {
@@ -29,6 +34,7 @@ export async function GET() {
         }
       });
       
+      console.log('Query response:', response.results?.length || 0, 'items');
       allResults.push(...response.results);
       cursor = response.next_cursor;
     } while (cursor);
@@ -49,8 +55,8 @@ export async function GET() {
     const levels = Array.from(new Set(vocabList.map((v: any) => v.等級))).sort();
 
     return Response.json({ vocabList, levels });
-  } catch (error) {
-    console.error("Notion API error:", error);
-    return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"] });
+  } catch (error: any) {
+    console.error("Notion API error:", error.message);
+    return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: error.message });
   }
 }
