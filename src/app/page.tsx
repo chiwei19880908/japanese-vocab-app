@@ -143,12 +143,21 @@ export default function Home() {
     }
   }, [previewIndex, mode, previewBatch]);
 
-  // Quiz mode - auto-play if audio enabled
+  // Quiz mode - auto-play
   useEffect(() => {
-    if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer ) {
-      setTimeout(() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文), 800);
+    if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer) {
+      if (quizType === 5 && listeningOrder.length > 0) {
+        // For listening order type, play all 4 in sequence
+        setTimeout(() => {
+          listeningOrder.forEach((vocab, i) => {
+            setTimeout(() => speak(vocab.讀音 || vocab.日文), i * 1500);
+          });
+        }, 800);
+      } else {
+        setTimeout(() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文), 800);
+      }
     }
-  }, [quizCurrentQ, mode, quizBatch, selectedAnswer]);
+  }, [quizCurrentQ, mode, quizBatch, selectedAnswer, quizType, listeningOrder]);
 
   // SRS mode - auto-play if audio enabled
   useEffect(() => {
