@@ -1,9 +1,5 @@
-import { Client } from "@notionhq/client";
-
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
-
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 const MOCK_VOCAB = [
   { 日文: "測試", 讀音: "てすと", 中文: "測試", 等級: "N5", 例句: "", 例句中文: "" },
@@ -18,25 +14,40 @@ export async function GET() {
   }
 
   try {
-    // Use data_sources endpoint - works for this integration
-    const response: any = await (notion as any).request({
+    // Use fetch directly instead of SDK
+    const response = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
       method: 'POST',
-      path: `/v1/data_sources/${dbId}/query`,
-      body: { page_size: 100 }
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Notion-Version': '2025-09-03',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ page_size: 100 })
     });
     
-    let allResults = [...response.results];
-    let nextCursor = response.next_cursor;
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: data.message });
+    }
+    
+    let allResults = [...(data.results || [])];
+    let nextCursor = data.next_cursor;
     
     // Get more pages if available
     while (nextCursor) {
-      const nextPage: any = await (notion as any).request({
+      const nextResponse = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
         method: 'POST',
-        path: `/v1/data_sources/${dbId}/query`,
-        body: { page_size: 100, start_cursor: nextCursor }
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Notion-Version': '2025-09-03',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ page_size: 100, start_cursor: nextCursor })
       });
-      allResults = [...allResults, ...nextPage.results];
-      nextCursor = nextPage.next_cursor;
+      const nextData = await nextResponse.json();
+      allResults = [...allResults, ...(nextData.results || [])];
+      nextCursor = nextData.next_cursor;
     }
 
     // Extract vocab list and unique levels
@@ -56,7 +67,6 @@ export async function GET() {
 
     return Response.json({ vocabList, levels });
   } catch (error: any) {
-    console.error("Notion API error:", error.message);
     return Response.json({ vocabList: MOCK_VOCAB, levels: ["N5"], error: error.message });
   }
 }

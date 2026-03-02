@@ -1,8 +1,7 @@
-import { Client } from "@notionhq/client";
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
-
-// Database IDs - use data_sources endpoint format
+// Database IDs
 const REPORT_DB_ID = process.env.NOTION_REPORT_DB_ID || "eeab3d11-9721-48a1-b17e-040f4e468d07";
 
 export async function POST(request: Request) {
@@ -23,11 +22,15 @@ export async function POST(request: Request) {
     // Build content string
     const content = `${vocab} - ${issueType || ""} ${description || ""}`;
 
-    // Use data_sources endpoint
-    await (notion as any).request({
+    // Use fetch directly
+    const response = await fetch(`https://api.notion.com/v1/pages`, {
       method: 'POST',
-      path: '/v1/pages',
-      body: {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Notion-Version': '2025-09-03',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
         parent: { database_id: REPORT_DB_ID },
         properties: {
           "Name": {
@@ -37,8 +40,13 @@ export async function POST(request: Request) {
             select: { name: "待處理" }
           }
         }
-      }
+      })
     });
+
+    if (!response.ok) {
+      const error = await response.json();
+      return Response.json({ error: error.message }, { status: 500 });
+    }
 
     return Response.json({ success: true, message: "回報已送出！" });
   } catch (error) {
