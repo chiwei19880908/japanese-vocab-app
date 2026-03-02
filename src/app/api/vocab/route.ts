@@ -15,23 +15,53 @@ export async function GET() {
   }
 
   try {
-    const allResults: any[] = [];
-    let cursor: string | undefined = undefined;
+    // Use fetch directly to avoid SDK issues
+    const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Notion-Version': '2025-09-03',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ page_size: 100 })
+    });
     
-    // Use raw request to data_sources endpoint (works for connected databases)
-    do {
-      const response: any = await (notion as any).request({
+    const data = await response.json();
+    
+    if (!data.results) {
+      console.log('No results, trying data_sources...');
+      // Fallback to data_sources
+      const response2 = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
         method: 'POST',
-        path: `/v1/data_sources/${dbId}/query`,
-        body: {
-          page_size: 100,
-          ...(cursor ? { start_cursor: cursor } : {})
-        }
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Notion-Version': '2025-09-03',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ page_size: 100 })
       });
-      
-      allResults.push(...response.results);
-      cursor = response.next_cursor;
-    } while (cursor);
+      const data2 = await response2.json();
+      var allResults = data2.results || [];
+    } else {
+      var allResults = data.results || [];
+    }
+
+    // Handle pagination
+    let cursor = data.next_cursor;
+    while (cursor) {
+      const nextResponse = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Notion-Version': '2025-09-03',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ page_size: 100, start_cursor: cursor })
+      });
+      const nextData = await nextResponse.json();
+      allResults = [...allResults, ...(nextData.results || [])];
+      cursor = nextData.next_cursor;
+    }
 
     // Extract vocab list and unique levels
     const vocabList = allResults.map((page: any) => {
