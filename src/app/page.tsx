@@ -101,7 +101,7 @@ export default function Home() {
 
   // Initial load - fetch all but render partially
   useEffect(() => {
-    fetch("/api/vocab")
+    fetch("/api/vocab?initial=true")
       .then(res => res.json())
       .then(data => {
         setVocabList(data.vocabList || []);
@@ -110,6 +110,18 @@ export default function Home() {
           setLevels(data.levels);
         }
         setLoading(false);
+        
+        // Background: fetch rest if needed
+        setTimeout(() => {
+          fetch("/api/vocab")
+            .then(r => r.json())
+            .then(data => {
+              if (data.vocabList) {
+                setVocabList(prev => data.vocabList.length > prev.length ? data.vocabList : prev);
+                setAllVocabCount(data.total || data.vocabList.length);
+              }
+            });
+        }, 2000);
       })
       .catch(() => setLoading(false));
     
