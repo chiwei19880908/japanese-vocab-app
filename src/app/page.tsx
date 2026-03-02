@@ -44,7 +44,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [levels, setLevels] = useState<string[]>(['N5', 'N4', 'N3', 'N2', 'N1']);
   const [level, setLevel] = useState('all');
-  const [audioEnabled, setAudioEnabled] = useState(false); // Require user tap for mobile audio
 
   // User stats
   const [userStats, setUserStats] = useState(() => {
@@ -139,24 +138,24 @@ export default function Home() {
 
   // Auto play in preview - only if audio enabled
   useEffect(() => {
-    if (mode === 'preview' && previewBatch.length > 0 && audioEnabled) {
+    if (mode === 'preview' && previewBatch.length > 0 ) {
       setTimeout(() => speak(previewBatch[previewIndex]?.讀音 || previewBatch[previewIndex]?.日文), 800);
     }
-  }, [previewIndex, mode, previewBatch, audioEnabled]);
+  }, [previewIndex, mode, previewBatch]);
 
   // Quiz mode - auto-play if audio enabled
   useEffect(() => {
-    if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer && audioEnabled) {
+    if (mode === 'quiz' && quizBatch.length > 0 && !selectedAnswer ) {
       setTimeout(() => speak(quizBatch[quizCurrentQ - 1]?.讀音 || quizBatch[quizCurrentQ - 1]?.日文), 800);
     }
-  }, [quizCurrentQ, mode, quizBatch, selectedAnswer, audioEnabled]);
+  }, [quizCurrentQ, mode, quizBatch, selectedAnswer]);
 
   // SRS mode - auto-play if audio enabled
   useEffect(() => {
-    if (srsMode && srsList.length > 0 && !showSrsAnswer && audioEnabled) {
+    if (srsMode && srsList.length > 0 && !showSrsAnswer ) {
       setTimeout(() => speak(srsList[srsIndex]?.讀音 || srsList[srsIndex]?.日文), 800);
     }
-  }, [srsIndex, srsMode, srsList, showSrsAnswer, audioEnabled]);
+  }, [srsIndex, srsMode, srsList, showSrsAnswer]);
 
   const switchMode = (newMode: string, action?: () => void) => {
     const inProgress = (srsMode && srsIndex > 0 && !srsFinished) || (mode === 'quiz' && quizScore.total > 0 && !quizFinished);
@@ -404,17 +403,6 @@ export default function Home() {
 
   return (
     <div className="container">
-      {/* Audio enable overlay for mobile */}
-      {!audioEnabled && (
-        <div className="audio-enable-overlay" onClick={() => setAudioEnabled(true)}>
-          <div className="audio-enable-content">
-            <div className="audio-icon">🔊</div>
-            <div className="audio-text">點擊啟用發音</div>
-            <div className="audio-subtext">點擊一次即可啟用自動播放</div>
-          </div>
-        </div>
-      )}
-
       {showConfirm && (
         <div className="modal-overlay">
           <div className="modal">
