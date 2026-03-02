@@ -1,5 +1,8 @@
 import { Client } from "@notionhq/client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 const MOCK_VOCAB = [
