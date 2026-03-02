@@ -116,7 +116,7 @@ export default function Home() {
           fetch("/api/vocab")
             .then(r => r.json())
             .then(data => {
-              if (data.vocabList) {
+              if (data.vocabList && level === 'all') {
                 setVocabList(prev => data.vocabList.length > prev.length ? data.vocabList : prev);
                 setAllVocabCount(data.total || data.vocabList.length);
               }
@@ -527,8 +527,18 @@ export default function Home() {
 
       <div className="controls">
         <select value={level} onChange={(e) => { 
-          setLevel(e.target.value); 
+          const newLevel = e.target.value;
+          setLevel(newLevel); 
           setVisibleCount(50);
+          // Fetch filtered data
+          setLoading(true);
+          fetch(`/api/vocab?level=${newLevel}`)
+            .then(res => res.json())
+            .then(data => {
+              setVocabList(data.vocabList || []);
+              setAllVocabCount(data.total || 0);
+              setLoading(false);
+            });
         }}>
           <option value="all">全部</option>
           {levels.map((l) => <option key={l} value={l}>{l}</option>)}
