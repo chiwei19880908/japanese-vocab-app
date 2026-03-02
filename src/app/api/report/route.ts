@@ -16,24 +16,18 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { vocab, issueType, description } = body;
 
-    if (!vocab || !issueType) {
+    if (!vocab) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    // Build content string
+    const content = `${vocab} - ${issueType || ""} ${description || ""}`;
 
     await notion.pages.create({
       parent: { database_id: REPORT_DB_ID },
       properties: {
-        "單字": {
-          title: [{ text: { content: vocab } }]
-        },
-        "問題": {
-          select: { name: issueType }
-        },
-        "說明": {
-          rich_text: [{ text: { content: description || "" } }]
-        },
-        "狀態": {
-          select: { name: "待處理" }
+        "Name": {
+          title: [{ text: { content } }]
         }
       }
     });
