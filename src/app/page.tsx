@@ -749,7 +749,10 @@ export default function Home() {
                   <span className="vocab-item-cn">{vocab.中文}</span>
                   {learned >= 3 && <span className="vocab-item-learned">✓</span>}
                 </div>
-                <span className="vocab-item-level">{vocab.等級}</span>
+                <div className="vocab-item-actions">
+                  <button className="btn-report" onClick={() => { setReportVocab(vocab.日文); setShowReport(true); }} title="回報問題">⚠️</button>
+                  <span className="vocab-item-level">{vocab.等級}</span>
+                </div>
               </div>
             );
           })}
