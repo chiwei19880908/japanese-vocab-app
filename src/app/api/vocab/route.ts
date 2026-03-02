@@ -18,10 +18,11 @@ export async function GET() {
   }
 
   try {
-    // Use notion.databases.query through SDK
-    const response = await notion.databases.query({
-      database_id: dbId,
-      page_size: 100,
+    // Use raw request to avoid SDK type issues
+    const response: any = await (notion as any).request({
+      method: 'POST',
+      path: `/v1/databases/${dbId}/query`,
+      body: { page_size: 100 }
     });
     
     let allResults = [...response.results];
@@ -29,10 +30,10 @@ export async function GET() {
     
     // Get more pages if available
     while (nextCursor) {
-      const nextPage: any = await notion.databases.query({
-        database_id: dbId,
-        page_size: 100,
-        start_cursor: nextCursor,
+      const nextPage: any = await (notion as any).request({
+        method: 'POST',
+        path: `/v1/databases/${dbId}/query`,
+        body: { page_size: 100, start_cursor: nextCursor }
       });
       allResults = [...allResults, ...nextPage.results];
       nextCursor = nextPage.next_cursor;
