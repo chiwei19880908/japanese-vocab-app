@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       const body: any = { page_size: size };
       if (cursor) body.start_cursor = cursor;
       
-      const response = await fetch(`https://api.notion.com/v1/data_sources/${dbId}/query`, {
+      const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
