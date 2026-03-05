@@ -818,3 +818,53 @@ button {
   opacity: 1;
   filter: grayscale(0);
 }
+
+/*** Cloze Mode Styles ***/
+.cloze-question {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.cloze-sentence {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  padding: 20px;
+  border-radius: 12px;
+  margin: 16px 0;
+}
+
+.cloze-word {
+  padding: 20px;
+}
+
+.cloze-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.cloze-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-wrong {
+  background: #fee;
+  color: #c44;
+  border: 2px solid #c44;
+}
+
+.btn-wrong:hover {
+  background: #fdd;
+}
+
+.btn-correct {
+  background: #efe;
+  color: #4a4;
+  border: 2px solid #4a4;
+}
+
+.btn-correct:hover {
+  background: #dfd;
+}

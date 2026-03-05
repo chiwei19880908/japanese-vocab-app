@@ -99,8 +99,15 @@ export default function Home() {
     }
   };
 
-  // Mode: 'list' | 'preview' | 'quiz'
+  // Mode: 'list' | 'preview' | 'quiz' | 'cloze'
   const [mode, setMode] = useState('list');
+  
+  // Cloze mode state
+  const [clozeBatch, setClozeBatch] = useState<Vocab[]>([]);
+  const [clozeIndex, setClozeIndex] = useState(0);
+  const [clozeRevealed, setClozeRevealed] = useState(false);
+  const [clozeFinished, setClozeFinished] = useState(false);
+  const [clozeCorrect, setClozeCorrect] = useState(0);
   
   // Preview mode
   const [previewBatch, setPreviewBatch] = useState<Vocab[]>([]);
@@ -219,6 +226,13 @@ export default function Home() {
       setTimeout(() => speak(previewBatch[previewIndex]?.讀音 || previewBatch[previewIndex]?.日文), 800);
     }
   }, [previewIndex, mode, previewBatch]);
+
+  // Cloze mode - auto-play when showing answer
+  useEffect(() => {
+    if (mode === 'cloze' && clozeRevealed && clozeBatch.length > 0) {
+      setTimeout(() => speak(clozeBatch[clozeIndex]?.讀音 || clozeBatch[clozeIndex]?.日文), 500);
+    }
+  }, [clozeRevealed, mode, clozeIndex, clozeBatch]);
 
   // Quiz mode - auto-play
   useEffect(() => {
@@ -472,6 +486,31 @@ export default function Home() {
     setSrsMode(true);
   };
 
+  // Cloze (克漏字) mode
+  const startCloze = () => {
+    const batch = [...filteredList].sort(() => Math.random() - 0.5).slice(0, 10);
+    setClozeBatch(batch);
+    setClozeIndex(0);
+    setClozeRevealed(false);
+    setClozeFinished(false);
+    setClozeCorrect(0);
+    setMode('cloze');
+    setSrsMode(false);
+  };
+
+  const nextCloze = (isCorrect: boolean) => {
+    if (isCorrect) setClozeCorrect(prev => prev + 1);
+    if (clozeIndex + 1 >= clozeBatch.length) {
+      setClozeFinished(true);
+      if (clozeCorrect + (isCorrect ? 1 : 0) === clozeBatch.length) {
+        checkAchievements(true);
+      }
+    } else {
+      setClozeIndex(prev => prev + 1);
+      setClozeRevealed(false);
+    }
+  };
+
   const answerSrs = (isCorrect: boolean) => {
     const current = srsList[srsIndex];
     const newCount = { ...learnedCount };
@@ -601,6 +640,7 @@ export default function Home() {
         </select>
         
         <button className="btn-primary" onClick={() => switchMode('preview', startPreview)}>🚀 快速學習</button>
+        <button className="btn-secondary" onClick={() => switchMode('cloze', startCloze)}>✏️ 克漏字</button>
         <button className="btn-secondary" onClick={() => switchMode('list', () => setSrsMode(false))}>📖 複習</button>
       </div>
 
@@ -793,6 +833,77 @@ export default function Home() {
               setReportVocab(currentVocab?.日文); 
               setShowReport(true); 
             }}>⚠️ 回報</button>
+          </div>
+        </div>
+      )}
+
+      {/* Cloze Mode (克漏字) */}
+      {mode === 'cloze' && !clozeFinished && clozeBatch.length > 0 && (
+        <div className="card">
+          <div className="mode-badge" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>✏️ 克漏字模式</div>
+          <div className="progress-text">第 {clozeIndex + 1} / {clozeBatch.length} 題</div>
+          <div className="progress-bar"><div className="progress-fill" style={{width: `${((clozeIndex + 1) / clozeBatch.length) * 100}%`, background: 'linear-gradient(90deg, #667eea, #764ba2)'}}></div></div>
+          
+          <div className="cloze-question">
+            <div className="vocab-chinese" style={{fontSize: '1.3em', marginBottom: 16}}>{clozeBatch[clozeIndex]?.中文}</div>
+            
+            {/* Cloze sentence - hide the Japanese word */}
+            {clozeBatch[clozeIndex]?.例句 ? (
+              <div className="cloze-sentence">
+                <div className="example-jp" style={{fontSize: '1.2em'}}>
+                  {clozeBatch[clozeIndex]?.例句.replace(clozeBatch[clozeIndex]?.日文, '【_____】')}
+                </div>
+                {clozeRevealed && (
+                  <div className="example-cn" style={{marginTop: 8}}>
+                    {clozeBatch[clozeIndex]?.例句中文}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="cloze-word">
+                {clozeRevealed ? (
+                  <div className="vocab-japanese" style={{fontSize: '1.5em'}}>{clozeBatch[clozeIndex]?.日文}</div>
+                ) : (
+                  <div className="cloze-hint">
+                    <div className="vocab-kana">{clozeBatch[clozeIndex]?.讀音}</div>
+                    <button className="sound-btn" onClick={() => speak(clozeBatch[clozeIndex]?.讀音 || clozeBatch[clozeIndex]?.日文)}>🔊 播放發音</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="card-actions">
+            {!clozeRevealed ? (
+              <button className="btn-primary btn-large" onClick={() => setClozeRevealed(true)}>
+                顯示答案
+              </button>
+            ) : (
+              <div className="cloze-buttons">
+                <button className="btn-wrong btn-large" onClick={() => nextCloze(false)}>❌ 不會</button>
+                <button className="btn-correct btn-large" onClick={() => nextCloze(true)}>✅ 記住了</button>
+              </div>
+            )}
+          </div>
+          <div className="card-footer">
+            <button onClick={() => setMode('list')}>退出</button>
+          </div>
+        </div>
+      )}
+
+      {/* Cloze Finished */}
+      {mode === 'cloze' && clozeFinished && (
+        <div className="card">
+          <div className="celebration-content" style={{padding: 20}}>
+            <div className="celebration-icon" style={{fontSize: 48}}>🎉</div>
+            <div className="celebration-title">克漏字完成！</div>
+            <div className="celebration-desc">
+              正確率: {clozeCorrect} / {clozeBatch.length} ({Math.round((clozeCorrect / clozeBatch.length) * 100)}%)
+            </div>
+            <div className="card-actions" style={{marginTop: 20}}>
+              <button className="btn-primary" onClick={() => switchMode('cloze', startCloze)}>再來一次</button>
+              <button className="btn-secondary" onClick={() => setMode('list')}>返回列表</button>
+            </div>
           </div>
         </div>
       )}
